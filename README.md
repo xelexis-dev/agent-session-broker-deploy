@@ -121,7 +121,7 @@ Claude·Codex를 실행할 컴퓨터에 `asb-client` 실행파일을 준비합�
 
 ### 무인증 프로젝트
 
-프로젝트 접속 방식이 **무인증**이고 서버의 인스턴스 정책이 무인증 접속을 허용할 때 사용하는 설정입니다. `--token-file`은 넣지 않습니다. 시스템 관리자가 **인스턴스 설정**(`/admin/settings`)의 **무인증 프로젝트 접속**을 **차단**으로 저장하면 기존 무인증 프로젝트도 접속할 수 없습니다. 이때 Owner가 프로젝트를 **토큰 인증**으로 바꾼 뒤 아래 토큰 발급·클라이언트 설정을 적용하세요.
+프로젝트 접속 방식이 **무인증**이고 서버의 인스턴스 정책이 무인증 접속을 허용할 때 사용하는 설정입니다. `--token`은 넣지 않습니다. 시스템 관리자가 **인스턴스 설정**(`/admin/settings`)의 **무인증 프로젝트 접속**을 **차단**으로 저장하면 기존 무인증 프로젝트도 접속할 수 없습니다. 이때 Owner가 프로젝트를 **토큰 인증**으로 바꾼 뒤 아래 토큰 발급·클라이언트 설정을 적용하세요.
 
 **Claude — `.mcp.json`**
 
@@ -148,30 +148,14 @@ args = ["--broker-url", "http://127.0.0.1:8787/mcp?project=brk"]
 
 1. 브라우저에서 서버의 관리 패널에 로그인합니다. Owner가 **프로젝트 설정**의 접속 방식을 **토큰 인증**으로 저장하고 프로젝트 접속을 허용해야 합니다.
 2. **프로젝트 세션 관리**에서 원하는 세션 닉네임을 입력해 토큰을 발급합니다. 소유자는 발급한 사용자로 고정됩니다. Owner·Developer와 시스템 관리자가 본인 토큰을 발급할 수 있으며 Viewer는 발급할 수 없습니다.
-3. 한 번만 표시되는 원문을 아래 방법으로 **클라이언트 PC의 사용자 전용 파일**에 저장합니다. 파일에는 토큰만 한 줄로 넣고 따옴표, `TOKEN=`, `Bearer ` 같은 접두어는 넣지 않습니다. UTF-8(BOM 없음) 또는 ASCII로 저장합니다.
-4. 해당 파일의 절대경로를 `--token-file` 값에 지정하고, 30분 안에 세션 등록까지 완료합니다. 첫 등록 전 30분이 지나면 토큰과 닉네임 예약이 해제되므로 새로 발급합니다.
+3. 한 번만 표시되는 토큰 원문을 복사하여 아래 MCP 설정의 `--token` 다음 값에 붙여 넣습니다. 예제의 `발급받은_토큰_값`을 실제 값으로 바꾸세요. 별도 토큰 파일은 필요 없으며 `Bearer ` 또는 `TOKEN=` 접두어를 붙이지 않습니다.
+4. 설정을 저장하고 MCP 연결을 시작한 뒤, 발급 후 30분 안에 세션 등록까지 완료합니다. 첫 등록 전 30분이 지나면 토큰과 닉네임 예약이 해제되므로 새로 발급합니다.
 
-토큰은 처음 등록한 PC·하네스·대화에 묶입니다. Claude와 Codex 또는 서로 다른 대화에는 각각 별도 토큰과 파일을 사용하세요. 등록 닉네임은 **토큰 발급 UI에서 입력한 닉네임**이며, 프롬프트에서 다른 이름을 요청해도 바뀌지 않습니다.
+토큰은 처음 등록한 PC·하네스·대화에 묶입니다. Claude와 Codex 또는 서로 다른 대화에는 각각 별도 토큰을 사용하세요. 등록 닉네임은 **토큰 발급 UI에서 입력한 닉네임**이며, 프롬프트에서 다른 이름을 요청해도 바뀌지 않습니다.
 
-**Windows에서 토큰 파일 준비**
+토큰 값은 클라이언트 실행 인자와 로컬 MCP 설정에 들어갑니다. 실제 토큰이 포함된 설정은 Git·공유 폴더에 올리지 말고 본인만 접근하도록 관리하세요. 클라이언트는 서버 요청의 Authorization 헤더로 토큰을 전달하며, MCP 도구 인자나 진단 메시지에 토큰을 추가하지 않습니다.
 
-탐색기에서 본인 사용자 폴더 아래에 `C:\Users\사용자명\AppData\Local\asb\tokens` 폴더를 만듭니다. **속성 → 보안 → 고급**에서 상속된 일반 사용자·공유 그룹 접근을 제거하고 본인 계정만 읽고 쓸 수 있도록 설정한 뒤, 메모장 등 로컬 편집기로 `brk-claude.token` 또는 `brk-codex.token`에 토큰 한 줄을 저장합니다. 확장자 숨김 때문에 `.txt`가 추가되지 않았는지와 UTF-8(BOM 없음) 저장을 확인하세요. 파일에도 같은 접근 제한이 적용되어야 합니다.
-
-**Linux / macOS에서 토큰 파일 준비**
-
-아래 명령은 비어 있는 사용자 전용 파일을 준비합니다. 그 뒤 로컬 편집기로 필요한 파일에 토큰 한 줄을 붙여 넣고 저장하세요.
-
-```sh
-umask 077
-mkdir -p "$HOME/.config/asb/tokens"
-chmod 700 "$HOME/.config/asb/tokens"
-touch "$HOME/.config/asb/tokens/brk-claude.token" "$HOME/.config/asb/tokens/brk-codex.token"
-chmod 600 "$HOME/.config/asb/tokens/brk-claude.token" "$HOME/.config/asb/tokens/brk-codex.token"
-```
-
-아래 설정의 파일 경로는 Windows 예시입니다. Linux에서는 `/home/사용자명/.config/asb/tokens/brk-claude.token`, macOS에서는 `/Users/사용자명/.config/asb/tokens/brk-claude.token`처럼 바꾸고 Codex에는 `brk-codex.token`을 사용합니다. 설정에는 실제 **절대경로**를 쓰세요. `~`, `$HOME`, `%USERPROFILE%`는 `--token-file` 값에서 자동 확장되지 않습니다.
-
-토큰 파일을 저장소·공유 폴더·동기화 폴더에 두거나 Git에 추가하지 마세요. 원문을 URL, MCP 설정, 명령행 인자, 환경변수, 프롬프트 또는 로그에 넣지 않습니다. `--token-file`에는 파일 **경로만** 전달하며, 클라이언트가 읽은 토큰은 서버 요청의 Authorization 헤더로 전달됩니다.
+아래 `command`는 Windows 예시입니다. Linux/macOS에서는 설치한 `asb-client`의 절대경로로 바꾸되, `--token`에는 모든 OS에서 동일하게 토큰 값 자체를 입력합니다.
 
 **Claude — `.mcp.json`**
 
@@ -182,7 +166,7 @@ chmod 600 "$HOME/.config/asb/tokens/brk-claude.token" "$HOME/.config/asb/tokens/
       "command": "C:/tools/x-broker/asb-client.exe",
       "args": [
         "--broker-url", "http://127.0.0.1:8787/mcp?project=brk",
-        "--token-file", "C:/Users/사용자명/AppData/Local/asb/tokens/brk-claude.token"
+        "--token", "발급받은_토큰_값"
       ]
     }
   }
@@ -196,7 +180,7 @@ chmod 600 "$HOME/.config/asb/tokens/brk-claude.token" "$HOME/.config/asb/tokens/
 command = "C:/tools/x-broker/asb-client.exe"
 args = [
   "--broker-url", "http://127.0.0.1:8787/mcp?project=brk",
-  "--token-file", "C:/Users/사용자명/AppData/Local/asb/tokens/brk-codex.token"
+  "--token", "발급받은_토큰_값"
 ]
 ```
 
@@ -204,7 +188,7 @@ args = [
 
 설정을 저장한 뒤 해당 작업 폴더에서 평소처럼 `claude` 또는 `codex`를 실행하고 연결 허용 안내를 확인합니다. Codex의 프로젝트별 `.codex/config.toml`은 신뢰한 프로젝트에서 로드됩니다([Codex MCP 설정 안내](https://developers.openai.com/codex/mcp/)). 별도 플러그인이나 예전 `client` 서브커맨드는 필요 없습니다.
 
-`x-broker에 현재 세션을 등록해줘.`라고 요청한 뒤 목록에서 UI 닉네임을 확인합니다. 무인증 프로젝트에서는 원하는 닉네임을 함께 요청하세요. 클라이언트는 시작할 때 토큰 파일을 읽으므로 파일을 교체했다면 MCP 연결도 다시 시작합니다. 빈 파일이나 읽을 수 없는 경로는 오류로 처리되며 무인증으로 대신 연결하지 않습니다.
+`x-broker에 현재 세션을 등록해줘.`라고 요청한 뒤 목록에서 UI 닉네임을 확인합니다. 무인증 프로젝트에서는 원하는 닉네임을 함께 요청하세요. 토큰 값을 변경했다면 MCP 연결도 다시 시작합니다. `--token`을 지정하고 값을 비우거나 공백·개행을 넣으면 오류로 처리되며 무인증으로 대신 연결하지 않습니다. 0.3.1 이하의 `--token-file` 설정은 `--token`과 파일 안의 실제 토큰 값으로 바꿔야 합니다.
 
 ## 사용하기
 
