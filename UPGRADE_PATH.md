@@ -1,6 +1,14 @@
 # 업그레이드 경로
 
-이 안내는 **0.5.0까지**의 데이터 이전 경로를 다룹니다. 실행파일 교체 방법은 [설치 안내](https://github.com/xelexis-dev/agent-session-broker-deploy#readme), 버전별 파일과 변경 사항은 [공개 릴리스](https://github.com/xelexis-dev/agent-session-broker-deploy/releases)에서 확인하세요.
+이 안내는 **0.5.1까지**의 데이터 이전 경로를 다룹니다. 실행파일 교체 방법은 [설치 안내](https://github.com/xelexis-dev/agent-session-broker-deploy#readme), 버전별 파일과 변경 사항은 [공개 릴리스](https://github.com/xelexis-dev/agent-session-broker-deploy/releases)에서 확인하세요.
+
+## 0.5.1로 업데이트
+
+**0.5.0 → 0.5.1은 직접 업데이트하며 필수 중간 버전이나 DB 이전이 없습니다.** 기존 서버 데이터, 클라이언트 상태, 토큰과 MCP 설정을 유지하고 서버·클라이언트 실행파일을 교체한 뒤 MCP를 다시 연결합니다.
+
+구형 `register` 프롬프트와 내장 스킬·리소스는 더 이상 제공하지 않습니다. 정상 연결은 자동 등록하며, 명시 복구가 필요하면 `x-broker에 현재 세션을 등록해줘`라고 요청합니다. 복구용 `attach_session`은 유지됩니다.
+
+0.4.0 및 0.2.0~0.3.3의 정상 지원 데이터는 아래 0.5.0 안내의 목표 버전을 0.5.1로 바꾸어 직접 업데이트할 수 있습니다. 기존 무인증 사용자는 **0.4.0 토큰 전용 전환** 절차를 반드시 적용합니다. 0.5.0을 먼저 설치할 필요는 없습니다. 이전 버전으로 되돌릴 때의 전체 백업 복구 원칙은 그대로입니다.
 
 ## 0.5.0으로 업데이트
 
