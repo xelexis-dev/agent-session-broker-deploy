@@ -1,6 +1,10 @@
 # 업그레이드 경로
 
-이 안내는 **0.8.1까지**의 데이터 이전 경로를 다룹니다. 실행파일 교체 방법은 [설치 안내](https://github.com/xelexis-dev/agent-session-broker-deploy#readme), 버전별 파일과 변경 사항은 [공개 릴리스](https://github.com/xelexis-dev/agent-session-broker-deploy/releases)에서 확인하세요.
+이 안내는 **0.8.2까지**의 데이터 이전 경로를 다룹니다. 실행파일 교체 방법은 [설치 안내](https://github.com/xelexis-dev/agent-session-broker-deploy#readme), 버전별 파일과 변경 사항은 [공개 릴리스](https://github.com/xelexis-dev/agent-session-broker-deploy/releases)에서 확인하세요.
+
+## 0.8.2로 업데이트
+
+**0.8.1 → 0.8.2는 직접 업데이트합니다.** 클라이언트가 승인 자격증명을 디스크에 저장하기 전에 연결할 수 있던 순서 문제를 수정합니다. 기존 토큰·등록·상태 디렉터리를 유지하고 클라이언트 실행파일을 교체한 뒤 MCP를 재연결합니다. 이번 패치는 서버 저장 형식이나 연결 프로토콜을 바꾸지 않습니다. 0.7.0에서 직접 올라온다면 아래 0.8.1의 데이터 백업과 HTTP 정책 이전 안내도 적용합니다.
 
 ## 0.8.1로 업데이트
 
