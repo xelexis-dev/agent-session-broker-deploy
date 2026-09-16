@@ -1,6 +1,10 @@
 # 업그레이드 경로
 
-이 안내는 **0.8.2까지**의 데이터 이전 경로를 다룹니다. 실행파일 교체 방법은 [설치 안내](https://github.com/xelexis-dev/agent-session-broker-deploy#readme), 버전별 파일과 변경 사항은 [공개 릴리스](https://github.com/xelexis-dev/agent-session-broker-deploy/releases)에서 확인하세요.
+이 안내는 **0.8.3까지**의 데이터 이전 경로를 다룹니다. 실행파일 교체 방법은 [설치 안내](https://github.com/xelexis-dev/agent-session-broker-deploy#readme), 버전별 파일과 변경 사항은 [공개 릴리스](https://github.com/xelexis-dev/agent-session-broker-deploy/releases)에서 확인하세요.
+
+## 0.8.3으로 업데이트
+
+**0.8.2 → 0.8.3은 직접 업데이트합니다.** 프로젝트 토큰 발급 완료 화면의 새로고침이 토큰을 중복 발급하던 오류를 수정합니다. 기존 데이터 디렉터리를 유지하고 서버 실행파일 또는 컨테이너를 교체하면 적용되며, 데이터 형식과 연결 프로토콜은 바뀌지 않습니다. 업데이트 전에 열린 발급 완료 화면은 닫고 프로젝트 설정으로 다시 들어가세요. 이미 발급된 토큰은 유지되므로 불필요한 중복 토큰은 목록에서 확인한 뒤 취소합니다. 클라이언트 교체는 이 오류 수정의 필수 조건이 아닙니다. 이전 버전에서 올라오는 경우 아래 해당 버전의 백업·이전 안내도 적용합니다.
 
 ## 0.8.2로 업데이트
 
