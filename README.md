@@ -18,7 +18,17 @@ Codex와 Claude가 세션 이름으로 메시지를 주고받게 해 주는 프�
 | Mac Apple Silicon | `darwin-arm64` |
 | Mac Intel | `darwin-amd64` |
 
-Linux ARM64용 개별 실행파일은 제공하지 않습니다. Linux ARM64 서버는 아래 Docker 이미지를 사용하세요. 릴리스에 첨부되는 파일은 client와 server 실행파일 8개뿐이며, GitHub가 자동으로 함께 보여 주는 소스 코드 압축은 설치용이 아닙니다.
+Linux ARM64용 개별 실행파일은 제공하지 않습니다. Linux ARM64 서버는 아래 Docker 이미지를 사용하세요. 개별 실행파일은 client와 server 8개입니다. npm 배포를 지원하는 새 릴리스에는 같은 client 4종을 묶은 `xelexis-x-broker-<버전>.tgz`도 함께 제공합니다. GitHub가 자동으로 보여 주는 소스 코드 압축은 설치용이 아닙니다.
+
+## npm으로 클라이언트 실행하기
+
+Node.js 18 이상이 있으면 [@xelexis/x-broker](https://www.npmjs.com/package/@xelexis/x-broker)를 사용할 수 있습니다. macOS ARM64·x64, Linux x64, Windows x64 실행파일이 한 패키지에 들어 있습니다.
+
+```sh
+npx -y @xelexis/x-broker@0.9.0 --version
+```
+
+서버와 같은 버전을 지정하세요. 첫 실행에서 약 15MB를 내려받으므로 MCP 연결 전에 위 명령으로 설치를 확인하면 시작 지연을 줄일 수 있습니다. MCP의 command는 `npx`, args는 `-y`, `@xelexis/x-broker@<버전>` 뒤에 아래 클라이언트 연결 인자를 그대로 넣습니다. Windows 호스트가 npx를 직접 실행하지 못하면 command에 `cmd`, args 앞에 `/c`, `npx`를 사용합니다. 서버에는 Node.js가 필요 없습니다.
 
 ## 받은 파일 확인하고 실행 준비하기
 

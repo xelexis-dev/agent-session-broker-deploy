@@ -1,0 +1,90 @@
+name: Publish npm client
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Published stable release version x.y.z
+        required: true
+        type: string
+      publish:
+        description: Publish to npm (unchecked verifies and dry-runs only)
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-publish
+  cancel-in-progress: false
+
+jobs:
+  npm:
+    if: >-
+      github.repository == 'xelexis-dev/agent-session-broker-deploy' &&
+      ((github.event_name == 'release' && github.event.action == 'published' && !github.event.release.draft && !github.event.release.prerelease) ||
+      (github.event_name == 'workflow_dispatch' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)))
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      VERSION: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.version }}
+      PUBLISH: ${{ github.event_name == 'release' || inputs.publish }}
+    steps:
+      - name: Check out reviewed public validation code
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - name: Set up Node.js for trusted publishing
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
+      - name: Download published release bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          node -e 'const [a,b,c]=process.argv[1].split(".").map(Number); process.exit(a>11||(a===11&&(b>5||(b===5&&c>=1)))?0:1)' "$(npm --version)"
+          mkdir -p "$RUNNER_TEMP/npm-release"
+          gh api "repos/xelexis-dev/agent-session-broker-deploy/releases/tags/$VERSION" > "$RUNNER_TEMP/npm-release/release.json"
+          gh release download "$VERSION" --repo xelexis-dev/agent-session-broker-deploy \
+            --pattern "xelexis-x-broker-$VERSION.tgz" --dir "$RUNNER_TEMP/npm-release"
+      - name: Verify all checksums and decide publication
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 npm-release.py state --version "$VERSION" \
+            --release "$RUNNER_TEMP/npm-release/release.json" \
+            --tarball "$RUNNER_TEMP/npm-release/xelexis-x-broker-$VERSION.tgz" > "$RUNNER_TEMP/npm-release/state.json"
+      - name: Publish the verified bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          tarball="$RUNNER_TEMP/npm-release/xelexis-x-broker-$VERSION.tgz"
+          state="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["action"])' "$RUNNER_TEMP/npm-release/state.json")"
+          if [[ "$state" == skip ]]; then
+            echo 'This version is already published with identical content.'
+            exit 0
+          fi
+          [[ "$state" == publish ]]
+          tag="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["tag"])' "$RUNNER_TEMP/npm-release/state.json")"
+          [[ "$tag" == latest || "$tag" == "release-$VERSION" ]]
+          if [[ "$PUBLISH" != true ]]; then
+            npm publish "$tarball" --access public --ignore-scripts --tag "$tag" --registry=https://registry.npmjs.org --dry-run
+          else
+            npm publish "$tarball" --access public --ignore-scripts --tag "$tag" --registry=https://registry.npmjs.org
+            python3 npm-release.py state --version "$VERSION" \
+              --release "$RUNNER_TEMP/npm-release/release.json" --tarball "$tarball" > "$RUNNER_TEMP/npm-release/published.json"
+            python3 -c 'import json,sys; assert json.load(open(sys.argv[1]))["action"] == "skip"' "$RUNNER_TEMP/npm-release/published.json"
+          fi
