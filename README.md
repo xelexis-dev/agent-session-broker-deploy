@@ -28,7 +28,9 @@ Node.js 18 이상이 있으면 [@xelexis/x-broker](https://www.npmjs.com/package
 npx -y @xelexis/x-broker@0.9.0 --version
 ```
 
-서버와 같은 버전을 지정하세요. 첫 실행에서 약 15MB를 내려받으므로 MCP 연결 전에 위 명령으로 설치를 확인하면 시작 지연을 줄일 수 있습니다. MCP의 command는 `npx`, args는 `-y`, `@xelexis/x-broker@<버전>` 뒤에 아래 클라이언트 연결 인자를 그대로 넣습니다. Windows 호스트가 npx를 직접 실행하지 못하면 command에 `cmd`, args 앞에 `/c`, `npx`를 사용합니다. 서버에는 Node.js가 필요 없습니다.
+npm에는 클라이언트 코드·공통 의존성·패키징 또는 빌드 도구가 달라진 릴리스만 게시합니다. 서버와 Web 화면만 바뀌면 npm 게시를 건너뛰므로 서버 버전과 npm 버전이 다를 수 있습니다. `npm view @xelexis/x-broker version`으로 마지막 게시 버전을 확인한 뒤 그 버전을 고정해서 사용하세요. 공개 Release의 npm 번들 첨부만으로 같은 버전이 npm registry에도 게시됐다고 판단하지 마세요.
+
+npm에 마지막으로 게시된 클라이언트 버전을 지정하세요. 첫 실행에서 약 15MB를 내려받으므로 MCP 연결 전에 위 명령으로 설치를 확인하면 시작 지연을 줄일 수 있습니다. MCP의 command는 `npx`, args는 `-y`, `@xelexis/x-broker@<버전>` 뒤에 아래 클라이언트 연결 인자를 그대로 넣습니다. Windows 호스트가 npx를 직접 실행하지 못하면 command에 `cmd`, args 앞에 `/c`, `npx`를 사용합니다. 서버에는 Node.js가 필요 없습니다.
 
 ## 받은 파일 확인하고 실행 준비하기
 

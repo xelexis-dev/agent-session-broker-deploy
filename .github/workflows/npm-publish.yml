@@ -74,7 +74,7 @@ jobs:
           tarball="$RUNNER_TEMP/npm-release/xelexis-x-broker-$VERSION.tgz"
           state="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["action"])' "$RUNNER_TEMP/npm-release/state.json")"
           if [[ "$state" == skip ]]; then
-            echo 'This version is already published with identical content.'
+            python3 -c 'import json,sys; s=json.load(open(sys.argv[1])); print("npm publication skipped: " + s.get("reason", "identical published version") + ("; client version " + s["clientVersion"] if "clientVersion" in s else ""))' "$RUNNER_TEMP/npm-release/state.json"
             exit 0
           fi
           [[ "$state" == publish ]]

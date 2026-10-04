@@ -3,11 +3,14 @@ import argparse
 import base64
 import hashlib
 import json
+import io
 from pathlib import Path
 import re
 import subprocess
 import sys
 import tarfile
+import urllib.request
+import urllib.error
 
 REPOSITORY = 'https://github.com/xelexis-dev/agent-session-broker-deploy'
 PACKAGE = '@xelexis/x-broker'
@@ -89,7 +92,7 @@ def verify_bundle(tarball, version, hashes):
     for name, asset in binaries.items():
         require(hashlib.sha256(files[name]).hexdigest() == hashes[asset], 'Bundled client checksum mismatch')
     manifest = json.loads(files['package/package.json'], object_pairs_hook=strict_object)
-    keys = {'name', 'version', 'description', 'bin', 'files', 'engines', 'repository', 'homepage', 'bugs'}
+    keys = {'name', 'version', 'description', 'bin', 'files', 'engines', 'repository', 'homepage', 'bugs', 'xBrokerClientInputs'}
     paths = {n.removeprefix('package/') for n in names if n.startswith('package/bin/')}
     require(isinstance(manifest, dict) and set(manifest) == keys, 'Unexpected package manifest fields')
     require(manifest['name'] == PACKAGE and manifest['version'] == version
@@ -100,12 +103,13 @@ def verify_bundle(tarball, version, hashes):
             and set(manifest['files']) == paths
             and manifest['repository'] == {'type': 'git', 'url': 'git+' + REPOSITORY + '.git'}
             and manifest['homepage'] == REPOSITORY + '#readme'
-            and manifest['bugs'] == {'url': REPOSITORY + '#readme'}, 'Package identity or public metadata mismatch')
+            and manifest['bugs'] == {'url': REPOSITORY + '#readme'}
+            and valid_fingerprint(manifest['xBrokerClientInputs']), 'Package identity or public metadata mismatch')
     return manifest
 
 
 def npm_view(spec, field, runner):
-    result = runner(['npm', 'view', spec, field, '--json', '--registry=https://registry.npmjs.org'],
+    result = runner(['npm', 'view', spec] + ([field] if field else []) + ['--json', '--registry=https://registry.npmjs.org'],
                     text=True, capture_output=True, timeout=60, check=False)
     try:
         answer = json.loads(result.stdout, object_pairs_hook=strict_object)
@@ -119,18 +123,76 @@ def npm_view(spec, field, runner):
     return answer
 
 
-def publication_state(tarball, version, runner=subprocess.run):
+def valid_fingerprint(value):
+    return isinstance(value, str) and re.fullmatch(r'sha256:[0-9a-f]{64}', value) is not None
+
+
+def package_manifest(data):
+    require(isinstance(data, bytes) and 0 < len(data) <= MAX_FILE, 'Invalid registry bundle')
+    with tarfile.open(fileobj=io.BytesIO(data), mode='r:gz') as archive:
+        manifests = []
+        count = 0
+        for entry in archive:
+            count += 1
+            require(count <= 32, 'Too many registry bundle entries')
+            if entry.name == 'package/package.json':
+                require(entry.isreg() and not entry.linkname and 0 < entry.size <= 64000,
+                        'Unsafe registry manifest')
+                manifests.append(json.loads(archive.extractfile(entry).read(64001), object_pairs_hook=strict_object))
+        require(len(manifests) == 1 and isinstance(manifests[0], dict), 'Missing or duplicate registry manifest')
+        return manifests[0]
+
+
+def fetch_registry_bundle(url):
+    with urllib.request.urlopen(url, timeout=60) as response:
+        require(response.geturl() == url, 'Unexpected registry redirect')
+        return response.read(MAX_FILE + 1)
+
+
+def publication_state(tarball, version, runner=subprocess.run, fetcher=fetch_registry_bundle):
     current = version_tuple(version)
-    integrity = 'sha512-' + base64.b64encode(hashlib.sha512(Path(tarball).read_bytes()).digest()).decode('ascii')
+    data = Path(tarball).read_bytes()
+    candidate = package_manifest(data)
+    fingerprint = candidate.get('xBrokerClientInputs')
+    require(candidate.get('name') == PACKAGE and candidate.get('version') == version
+            and valid_fingerprint(fingerprint), 'Missing client input fingerprint')
+    integrity = 'sha512-' + base64.b64encode(hashlib.sha512(data).digest()).decode('ascii')
     existing = npm_view(PACKAGE + '@' + version, 'dist.integrity', runner)
     if existing is not None:
         require(existing == integrity, 'This version already has different content')
         return {'action': 'skip'}
-    tags = npm_view(PACKAGE, 'dist-tags', runner)
-    require(tags is None or isinstance(tags, dict), 'Invalid registry dist-tags')
-    tag = 'latest'
-    if tags and 'latest' in tags and version_tuple(tags['latest']) > current:
-        tag = 'release-' + version
+    metadata = npm_view(PACKAGE, None, runner)
+    if metadata is None:
+        return {'action': 'publish', 'tag': 'latest'}
+    require(isinstance(metadata, dict) and metadata.get('name') == PACKAGE, 'Invalid registry package')
+    tags, versions = metadata.get('dist-tags'), metadata.get('versions')
+    require(isinstance(tags, dict) and isinstance(versions, list), 'Invalid registry versions')
+    latest = tags.get('latest')
+    previous = version_tuple(latest)
+    require(previous != current, 'Inconsistent registry version lookup')
+    stable = [v for v in versions if isinstance(v, str) and re.fullmatch(r'(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)', v)]
+    require(stable and max(stable, key=version_tuple) == latest and metadata.get('version') == latest,
+            'Registry latest is not the highest stable version')
+    dist = metadata.get('dist')
+    require(isinstance(dist, dict), 'Missing registry integrity')
+    url = 'https://registry.npmjs.org/@xelexis/x-broker/-/x-broker-' + latest + '.tgz'
+    require(dist.get('tarball') == url, 'Unexpected registry tarball URL')
+    baseline = fetcher(url)
+    require(isinstance(baseline, bytes) and 0 < len(baseline) <= MAX_FILE, 'Invalid registry bundle')
+    expected = 'sha512-' + base64.b64encode(hashlib.sha512(baseline).digest()).decode('ascii')
+    require(dist.get('integrity') == expected, 'Registry bundle integrity mismatch')
+    published = package_manifest(baseline)
+    require(published.get('name') == PACKAGE and published.get('version') == latest,
+            'Registry bundle identity mismatch')
+    old = published.get('xBrokerClientInputs')
+    require(('xBrokerClientInputs' in published) == ('xBrokerClientInputs' in metadata)
+            and old == metadata.get('xBrokerClientInputs'), 'Registry fingerprint mismatch')
+    if 'xBrokerClientInputs' in published:
+        require(valid_fingerprint(old), 'Invalid published client fingerprint')
+        if old == fingerprint:
+            return {'action': 'skip', 'reason': 'client-unchanged', 'clientVersion': latest}
+    # Legacy packages without a fingerprint migrate once through a real publish.
+    tag = 'latest' if previous < current else 'release-' + version
     return {'action': 'publish', 'tag': tag}
 
 
