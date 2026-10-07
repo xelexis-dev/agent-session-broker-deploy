@@ -2,14 +2,33 @@
 
 Codex와 Claude가 세션 이름으로 메시지를 주고받게 해 주는 프로그램입니다. 대기 중에도 메시지를 자동으로 받아 답할 수 있습니다.
 
-이 저장소는 실행파일 배포용입니다. 아래 안내만으로 설치와 설정을 끝낼 수 있습니다.
+이 저장소는 Agent Session Broker의 공개 배포 안내를 제공합니다. MCP 클라이언트는 npm으로 실행하고, 서버는 실행파일 또는 Docker로 실행합니다.
 
-## 받을 파일 고르기
+## npm 클라이언트 준비
+
+Claude Code와 Codex의 MCP 클라이언트는 **npm 패키지로만 실행합니다**. MCP 설정에 `asb-client` 또는 `.exe` 파일 경로를 직접 넣지 않습니다. 패키지는 현재 PC에 맞는 클라이언트를 선택합니다. 서버는 아래 실행파일 또는 Docker 방식으로 구동합니다.
+
+클라이언트 PC에 Node.js 18 이상과 npm이 필요합니다. 지원 환경은 macOS ARM64·x64, Linux x64, Windows x64입니다. Linux ARM64 클라이언트는 지원하지 않습니다. 서버에는 Node.js가 필요 없습니다.
+
+```sh
+node --version
+npm --version
+npm view @xelexis/x-broker version
+npx -y @xelexis/x-broker@0.9.2 --version
+```
+
+아래 MCP 예제는 npm에 게시된 `0.9.2`를 고정합니다. 다른 버전을 사용할 때는 `npm view`로 게시 여부를 확인하고 예제의 버전을 함께 바꾸세요. `@latest`는 npm의 기본 게시 버전을 선택하지만, MCP 설정에는 확인한 숫자 버전을 고정하는 것을 권장합니다.
+
+npm에는 클라이언트 코드·공통 의존성·패키징 또는 빌드 도구가 달라진 릴리스만 게시합니다. 서버와 Web 화면만 바뀌면 npm 게시를 건너뜁니다. 따라서 서버 버전과 npm 클라이언트 버전은 다를 수 있습니다. GitHub Release에 번들이 있어도 같은 버전이 npm에 게시됐다는 뜻은 아닙니다.
+
+첫 실행은 약 15MB를 내려받습니다. MCP 연결 전에 위 `--version` 명령을 실행하면 첫 연결의 다운로드 지연을 줄일 수 있습니다. 설정 예제는 [Claude Code·Codex의 OS별 설정 예제](#npm-mcp-설정-예제)를 보세요.
+
+## 서버 파일 고르기
 
 [최신 릴리스](https://github.com/xelexis-dev/agent-session-broker-deploy/releases/latest)에서 실행파일을 직접 내려받습니다. 압축 해제나 설치 스크립트가 필요 없습니다.
 
 - 브로커 서버를 돌릴 컴퓨터: `asb-server-<버전>-<OS>-<아키텍처>`
-- Claude·Codex를 실행하는 컴퓨터: `asb-client-<버전>-<OS>-<아키텍처>`
+- Claude·Codex를 실행하는 컴퓨터: 위 npm 준비 절차를 따릅니다.
 
 | 사용 환경 | 파일명 끝부분 |
 | --- | --- |
@@ -18,21 +37,9 @@ Codex와 Claude가 세션 이름으로 메시지를 주고받게 해 주는 프�
 | Mac Apple Silicon | `darwin-arm64` |
 | Mac Intel | `darwin-amd64` |
 
-Linux ARM64용 개별 실행파일은 제공하지 않습니다. Linux ARM64 서버는 아래 Docker 이미지를 사용하세요. 개별 실행파일은 client와 server 8개입니다. npm 배포를 지원하는 새 릴리스에는 같은 client 4종을 묶은 `xelexis-x-broker-<버전>.tgz`도 함께 제공합니다. GitHub가 자동으로 보여 주는 소스 코드 압축은 설치용이 아닙니다.
+Linux ARM64용 개별 실행파일은 제공하지 않습니다. Linux ARM64 서버는 아래 Docker 이미지를 사용하세요. 릴리스에는 client와 server 실행파일 8개가 보관되어 있습니다. MCP 연결에는 client 파일을 직접 내려받지 않고 npm 패키지를 사용합니다. npm 배포를 지원하는 새 릴리스에는 같은 client 4종을 묶은 `xelexis-x-broker-<버전>.tgz`도 함께 제공합니다. GitHub가 자동으로 보여 주는 소스 코드 압축은 설치용이 아닙니다.
 
-## npm으로 클라이언트 실행하기
-
-Node.js 18 이상이 있으면 [@xelexis/x-broker](https://www.npmjs.com/package/@xelexis/x-broker)를 사용할 수 있습니다. macOS ARM64·x64, Linux x64, Windows x64 실행파일이 한 패키지에 들어 있습니다.
-
-```sh
-npx -y @xelexis/x-broker@0.9.0 --version
-```
-
-npm에는 클라이언트 코드·공통 의존성·패키징 또는 빌드 도구가 달라진 릴리스만 게시합니다. 서버와 Web 화면만 바뀌면 npm 게시를 건너뛰므로 서버 버전과 npm 버전이 다를 수 있습니다. `npm view @xelexis/x-broker version`으로 마지막 게시 버전을 확인한 뒤 그 버전을 고정해서 사용하세요. 공개 Release의 npm 번들 첨부만으로 같은 버전이 npm registry에도 게시됐다고 판단하지 마세요.
-
-npm에 마지막으로 게시된 클라이언트 버전을 지정하세요. 첫 실행에서 약 15MB를 내려받으므로 MCP 연결 전에 위 명령으로 설치를 확인하면 시작 지연을 줄일 수 있습니다. MCP의 command는 `npx`, args는 `-y`, `@xelexis/x-broker@<버전>` 뒤에 아래 클라이언트 연결 인자를 그대로 넣습니다. Windows 호스트가 npx를 직접 실행하지 못하면 command에 `cmd`, args 앞에 `/c`, `npx`를 사용합니다. 서버에는 Node.js가 필요 없습니다.
-
-## 받은 파일 확인하고 실행 준비하기
+## 서버 파일 확인하고 실행 준비하기
 
 릴리스 본문의 SHA-256과 받은 파일의 해시를 대조합니다.
 
@@ -42,11 +49,11 @@ npm에 마지막으로 게시된 클라이언트 버전을 지정하세요. 첫 
 | Linux | `sha256sum <파일>` |
 | macOS | `shasum -a 256 <파일>` |
 
-파일명을 `asb-client`와 `asb-server`(Windows는 `.exe`)로 바꾸면 아래 예제를 그대로 사용할 수 있습니다. Linux·macOS에서는 `chmod +x asb-client asb-server`로 받은 파일에 실행 권한을 부여합니다. 받은 구성요소만 지정하면 됩니다.
+서버 파일명을 `asb-server`(Windows는 `asb-server.exe`)로 바꿉니다. Linux·macOS에서는 `chmod +x asb-server`로 실행 권한을 줍니다. 클라이언트 실행파일은 직접 준비하지 않습니다.
 
 브라우저에서 내려받은 macOS 파일은 실행 권한을 준 뒤에도 Gatekeeper가 개발자를 확인할 수 없다는 메시지로 실행을 막을 수 있습니다. 해시를 확인한 파일이라면 실행을 한 번 시도한 뒤 **시스템 설정 → 개인정보 보호 및 보안 → 그래도 열기(Open Anyway)**에서 해당 파일을 허용하고 다시 실행합니다. [Apple의 파일별 실행 허용 안내](https://support.apple.com/guide/mac-help/mh40616/mac)를 따르세요. Windows에서도 새로 게시된 실행파일의 평판에 따라 SmartScreen 경고가 표시될 수 있습니다. [Microsoft 안내](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/smartscreen-reputation)를 참고하세요.
 
-받은 버전은 `asb-server --version`, `asb-client --version`으로 확인합니다(Windows는 `.exe`). 관리 UI는 서버 실행파일에 포함되어 별도 웹 서버나 Node 설치가 필요 없습니다.
+받은 버전은 `asb-server --version`으로 확인합니다(Windows는 `.exe`). 관리 UI는 서버 실행파일에 포함되어 별도 웹 서버나 Node 설치가 필요 없습니다.
 
 ## 서버 구동하기
 
@@ -131,15 +138,15 @@ Linux에서는 시작 전에 데이터 디렉터리를 만들고 컨테이너 �
 
 업그레이드 시 기존 JSON 상태를 한 번 DB로 이전하고 원본은 남겨 둡니다. 이후에는 DB가 기준이며 JSON을 수정해도 적용되지 않습니다. DB 손상은 새 관리자 설정으로 취급하지 않고 시작을 중단합니다. 백업은 서버를 중지한 뒤 `/data` 전체(DB와 존재하는 journal 포함)를 복사합니다. 복원·롤백도 서버가 중지된 상태에서 백업 전체를 되돌리세요. 실행 중인 DB 파일 하나만 복사하는 방법은 사용하지 마세요.
 
-컨테이너는 중앙 서버를 실행합니다. Claude·Codex를 사용하는 각 PC에는 해당 OS의 `asb-client` 실행파일을 준비하고, 아래 설정의 서버 주소를 Docker 서버의 IP 또는 도메인으로 지정하세요. 컨테이너에도 위의 신뢰하는 네트워크 사용 조건이 적용됩니다.
+컨테이너는 중앙 서버를 실행합니다. Claude·Codex를 사용하는 각 PC에는 Node.js와 npm을 준비하고, 아래 설정의 서버 주소를 Docker 서버의 IP 또는 도메인으로 지정하세요. 컨테이너에도 위의 신뢰하는 네트워크 사용 조건이 적용됩니다.
 
 ## Claude·Codex 연결하기
 
-Claude·Codex를 실행할 컴퓨터에 `asb-client` 실행파일을 준비합니다. **작업 폴더**에 `.mcp.json` 또는 `.codex/config.toml`을 만들고, 기존 설정이 있다면 다른 항목은 유지합니다. 아래에서 사용할 프로그램에 맞는 예제 하나를 선택하세요. 같은 `x-broker` 설정을 두 번 추가하지 않습니다.
+먼저 [npm 클라이언트 준비](#npm-클라이언트-준비)를 완료합니다. **작업 폴더**에 Claude Code는 `.mcp.json`, Codex는 `.codex/config.toml`을 만듭니다. 기존 설정이 있으면 다른 항목을 유지하고 `x-broker` 항목만 추가하거나 교체합니다. 같은 설정을 두 번 추가하지 않습니다.
 
-`command`는 **클라이언트 PC의 실행파일 절대경로**입니다. Windows 예제를 기준으로 하며, Linux는 `/opt/x-broker/asb-client`, macOS는 `/Users/사용자명/tools/x-broker/asb-client`처럼 실제 경로로 바꿉니다. Windows 경로는 예제처럼 `/`를 쓰면 JSON·TOML의 역슬래시 이스케이프를 피할 수 있습니다.
+macOS·Linux에서는 `command`를 `npx`로 지정합니다. Windows에서는 `cmd`와 `/c`, `npx`를 사용합니다. Claude Code 또는 Codex가 실행되는 환경의 PATH에서 Node.js와 npm을 찾을 수 있어야 합니다. 설치 후에는 해당 앱도 다시 시작하세요.
 
-`--broker-url`의 `127.0.0.1`은 서버가 같은 PC에 있을 때 사용합니다. 다른 PC의 서버라면 IP 또는 도메인과 실제 포트를 지정하고, 토큰 인증 연결에는 HTTPS 또는 Tailscale 같은 암호화된 신뢰 네트워크를 사용하세요. `project=brk`는 관리 패널에서 만든 프로젝트 이름으로 바꿉니다. 서로 통신할 세션은 같은 서버와 프로젝트를 사용합니다.
+예제의 `https://broker.example/mcp?project=brk`를 실제 서버 주소와 프로젝트 이름으로 바꿉니다. 서버가 같은 PC에 있을 때만 `127.0.0.1`을 사용합니다. 다른 PC에서는 서버 IP 또는 도메인과 실제 포트를 사용하세요. 서로 통신할 세션은 같은 서버와 프로젝트를 사용합니다. HTTP 연결은 아래 인스턴스 설정과 신뢰 네트워크 조건을 확인하세요.
 
 ### 기존 세션 토큰
 
@@ -163,17 +170,20 @@ HTTP 예외는 Tailscale 등 별도로 보호된 신뢰망에서만 사용하세
 
 토큰 값은 클라이언트 실행 인자와 로컬 MCP 설정에 들어갑니다. 실제 토큰이 포함된 설정은 Git·공유 폴더에 올리지 말고 본인만 접근하도록 관리하세요. 클라이언트는 서버 요청의 Authorization 헤더로 토큰을 전달하며, MCP 도구 인자나 진단 메시지에 토큰을 추가하지 않습니다.
 
-아래 `command`는 Windows 예시입니다. Linux/macOS에서는 설치한 `asb-client`의 절대경로로 바꾸되, `--token`에는 모든 OS에서 동일하게 토큰 값 자체를 입력합니다.
+### npm MCP 설정 예제
 
-**Claude — `.mcp.json`**
+사용하는 프로그램과 OS에 맞는 예제 하나를 선택하세요. `발급받은_토큰_값`은 **프로젝트 설정 → 프로젝트 토큰**에서 받은 실제 값으로 바꿉니다. 서버 주소와 `project=brk`도 바꾸세요. 예제의 토큰 문구는 실행 가능한 토큰이 아닙니다.
+
+**Claude Code — `.mcp.json` (macOS·Linux)**
 
 ```json
 {
   "mcpServers": {
     "x-broker": {
-      "command": "C:/tools/x-broker/asb-client.exe",
+      "command": "npx",
       "args": [
-        "--broker-url", "http://127.0.0.1:8787/mcp?project=brk",
+        "-y", "@xelexis/x-broker@0.9.2",
+        "--broker-url", "https://broker.example/mcp?project=brk",
         "--token", "발급받은_토큰_값"
       ]
     }
@@ -181,20 +191,60 @@ HTTP 예외는 Tailscale 등 별도로 보호된 신뢰망에서만 사용하세
 }
 ```
 
-**Codex — `.codex/config.toml`**
+**Codex — `.codex/config.toml` (macOS·Linux)**
 
 ```toml
 [mcp_servers.x-broker]
-command = "C:/tools/x-broker/asb-client.exe"
+command = "npx"
 args = [
-  "--broker-url", "http://127.0.0.1:8787/mcp?project=brk",
+  "-y", "@xelexis/x-broker@0.9.2",
+  "--broker-url", "https://broker.example/mcp?project=brk",
   "--token", "발급받은_토큰_값"
 ]
 ```
 
+**Claude Code — `.mcp.json` (Windows)**
+
+```json
+{
+  "mcpServers": {
+    "x-broker": {
+      "command": "cmd",
+      "args": [
+        "/c", "npx",
+        "-y", "@xelexis/x-broker@0.9.2",
+        "--broker-url", "https://broker.example/mcp?project=brk",
+        "--token", "발급받은_토큰_값"
+      ]
+    }
+  }
+}
+```
+
+**Codex — `.codex/config.toml` (Windows)**
+
+```toml
+[mcp_servers.x-broker]
+command = "cmd"
+args = [
+  "/c", "npx",
+  "-y", "@xelexis/x-broker@0.9.2",
+  "--broker-url", "https://broker.example/mcp?project=brk",
+  "--token", "발급받은_토큰_값"
+]
+```
+
+### 실행파일 MCP 설정을 npm으로 전환
+
+1. 기존 MCP 설정을 로컬에 백업합니다. 다른 MCP 항목은 유지합니다.
+2. 위 [npm 클라이언트 준비](#npm-클라이언트-준비) 명령으로 사용할 버전을 확인합니다.
+3. `x-broker`의 `command`와 `args`를 OS별 npm 예제로 바꿉니다. 기존 `--broker-url`·프로젝트·`--token` 값은 유지합니다. 지정한 `--auth-dir` 또는 `--state-dir`도 그대로 전달합니다.
+4. 기존과 같은 OS 사용자로 실행하고 인증 상태 디렉터리를 유지합니다. npm 캐시는 인증 상태 디렉터리와 별개입니다. 기존 상태를 삭제하거나 다른 PC에서 복사하지 않습니다.
+5. MCP 연결을 다시 시작하고 도구 목록과 세션 등록을 확인합니다. 설정 파일만 바꾸면 이미 실행 중인 MCP 프로세스는 바뀌지 않습니다.
+
 ### 연결과 등록 확인
 
-설정을 저장한 뒤 해당 작업 폴더에서 평소처럼 `claude` 또는 `codex`를 실행하고 연결 허용 안내를 확인합니다. Codex의 프로젝트별 `.codex/config.toml`은 신뢰한 프로젝트에서 로드됩니다([Codex MCP 설정 안내](https://developers.openai.com/codex/mcp/)). 별도 플러그인이나 예전 `client` 서브커맨드는 필요 없습니다.
+설정을 저장한 뒤 해당 작업 폴더에서 평소처럼 `claude` 또는 `codex`를 실행하고 연결 허용 안내를 확인합니다. Codex의 프로젝트별 `.codex/config.toml`은 신뢰한 프로젝트에서 로드됩니다([Codex MCP 설정 안내](https://developers.openai.com/codex/mcp/)). Claude Code의 프로젝트 설정과 승인 방법은 [Claude Code MCP 안내](https://code.claude.com/docs/en/mcp)를 참고하세요. 별도 플러그인이나 예전 `client` 서브커맨드는 필요 없습니다.
 
 MCP 연결 후 클라이언트가 실제 현재 대화를 확인하면 승인 시 지정한 닉네임(구형 세션 토큰은 발급 때 지정한 이름)으로 **자동 등록**합니다. 구형 `register` MCP 프롬프트와 내장 등록 스킬은 제공하지 않습니다. 연결을 해제했거나 등록이 정리되어 명시적으로 복구해야 한다면 같은 대화에서 `x-broker에 현재 세션을 등록해줘`라고 요청하세요. 복구용 `attach_session` 도구는 유지됩니다. 관리 패널의 프로젝트 상세에서 세션 목록에 닉네임이 표시되는지, **프로젝트 설정 → 프로젝트 토큰**에서 상태가 사용 중인지 확인합니다. MCP 연결 성공만으로 서버 등록 성공을 뜻하지는 않습니다.
 
@@ -206,7 +256,7 @@ Codex가 MCP 시작 시 대화 ID를 제공하지 않는 환경에서는 첫 일
 
 ### 현재 세션의 닉네임 변경
 
-연결된 대화에서 `내 x-broker 닉네임을 home-worker-3으로 바꿔줘`라고 요청하면 `rename_session` 도구에 새 `name`만 전달해 즉시 변경합니다. 관리자 재승인은 필요하지 않으며 자기 세션만 변경할 수 있습니다. 서버와 로컬 `asb-client` 모두 이 도구를 지원하는 버전이어야 합니다.
+연결된 대화에서 `내 x-broker 닉네임을 home-worker-3으로 바꿔줘`라고 요청하면 `rename_session` 도구에 새 `name`만 전달해 즉시 변경합니다. 관리자 재승인은 필요하지 않으며 자기 세션만 변경할 수 있습니다. 서버와 npm 클라이언트 모두 이 도구를 지원하는 버전이어야 합니다.
 
 같은 프로젝트에서 이미 사용하거나 예약한 이름과 잘못된 이름은 거부합니다. 등록 ID·대화·수신 연결·대기 메시지를 유지하며, 재접속이나 서버 재시작 뒤에도 새 이름을 사용합니다. 이전 이름은 별칭으로 남지 않습니다. 변경 전에 접수한 메시지는 당시 이름을 유지합니다. 변경 결과가 불확실하면 세션 목록을 확인하고 같은 새 이름으로 다시 요청할 수 있습니다.
 
@@ -243,14 +293,14 @@ UUID 닉네임과 대화 ID를 구별해야 하면 `name:<닉네임>`, `session:
 
 [업그레이드 경로와 필수 버전 순서](https://github.com/xelexis-dev/agent-session-broker-deploy/blob/main/UPGRADE_PATH.md)를 먼저 확인하세요. 0.2.0·0.2.1에서 0.3.0으로는 중간 버전 없이 직접 이전할 수 있습니다. 서버를 종료하고 데이터 전체를 백업한 뒤 진행합니다.
 
-같은 `--memory-dir` 또는 Docker 볼륨을 유지하고 서버와 클라이언트를 모두 업데이트합니다. 0.8.0부터 HTTP 연결 허용은 프로젝트별 설정이 아니라 **관리자 패널 → 인스턴스 설정**의 인스턴스 공통 설정입니다. 업그레이드 시 삭제 중이 아닌 프로젝트가 하나 이상 있고 모두 HTTP 허용이었을 때만 인스턴스 허용으로 옮겨지고, 그 밖에는 차단으로 시작하므로 HTTP 연결을 계속 쓰려면 관리자가 다시 켜야 합니다. 최초 `/setup` 후 기존의 정상 프로젝트 디렉터리는 토큰 인증 프로젝트로 가져오며 기존 관리 설정과 데이터를 보존합니다. 구버전의 메모리에만 있던 등록은 이전할 수 없습니다. 기존 무인증 대화의 등록을 보존하여 전환할 때는 UPGRADE_PATH의 일회 등록 절차를 따르세요.
+서버를 업데이트할 때 같은 `--memory-dir` 또는 Docker 볼륨을 유지합니다. 클라이언트는 npm에 게시된 버전을 확인합니다. 0.8.0부터 HTTP 연결 허용은 프로젝트별 설정이 아니라 **관리자 패널 → 인스턴스 설정**의 인스턴스 공통 설정입니다. 업그레이드 시 삭제 중이 아닌 프로젝트가 하나 이상 있고 모두 HTTP 허용이었을 때만 인스턴스 허용으로 옮겨지고, 그 밖에는 차단으로 시작하므로 HTTP 연결을 계속 쓰려면 관리자가 다시 켜야 합니다. 최초 `/setup` 후 기존의 정상 프로젝트 디렉터리는 토큰 인증 프로젝트로 가져오며 기존 관리 설정과 데이터를 보존합니다. 구버전의 메모리에만 있던 등록은 이전할 수 없습니다. 기존 무인증 대화의 등록을 보존하여 전환할 때는 UPGRADE_PATH의 일회 등록 절차를 따르세요.
 
 압축본과 설치 스크립트로 설치했던 0.1.11 이하 버전에서 올라오는 경우, `run-broker.sh`와 `run-broker.ps1` 런처는 `.active-version`이 가리키는 `.versions/<버전>/` 안의 실행파일을 사용합니다. **설치 루트에 새 파일을 복사하는 것만으로 이 런처가 새 버전을 선택하지 않습니다.** 다음 순서로 전환하세요.
 
-1. 새 실행파일을 별도 폴더에 두고 `asb-client`/`asb-server`(Windows는 `.exe`)로 이름을 정합니다. 기존 설치 폴더와 데이터는 보관합니다.
-2. 서버 시작 명령을 새 `asb-server`의 절대경로로 바꾸고 `--memory-dir`도 기존 데이터의 **절대경로**로 지정합니다. 실행 폴더가 바뀌어도 같은 데이터를 사용해야 합니다.
-3. MCP 설정의 `command`를 새 `asb-client` 절대경로로 바꿉니다. 예를 들어 Windows는 `C:\tools\asb\asb-client.exe`, macOS는 `/Users/me/tools/asb/asb-client`, Linux는 `/home/me/tools/asb/asb-client`입니다. 기존 런처를 통하지 않고 직접 실행합니다.
-4. 지정한 실행파일에 `--version`을 전달해 새 버전을 확인한 뒤 서버와 MCP 연결을 다시 시작합니다. 디스크 파일 교체만으로 이미 실행 중인 MCP 프로세스가 바뀌지는 않습니다.
+1. 새 서버 실행파일을 별도 폴더에 두고 `asb-server`(Windows는 `asb-server.exe`)로 이름을 정합니다. 기존 설치 폴더와 데이터는 보관합니다.
+2. 서버 시작 명령을 새 `asb-server`의 절대경로로 바꾸고 `--memory-dir`도 기존 데이터의 **절대경로**로 지정합니다.
+3. 클라이언트는 위 [npm 전환 절차](#실행파일-mcp-설정을-npm으로-전환)를 따릅니다. MCP 설정에 실행파일 경로를 직접 지정하지 않습니다.
+4. 서버 버전과 npm 클라이언트 버전을 각각 확인한 뒤 서버와 MCP 연결을 다시 시작합니다. 서버와 클라이언트 버전 번호가 같을 필요는 없습니다.
 
 클라이언트 옵션 앞에 예전 `client` 서브커맨드를 붙이지 않습니다.
 
@@ -261,7 +311,7 @@ UUID 닉네임과 대화 ID를 구별해야 하면 `name:<닉네임>`, `session:
 - 새 클라이언트는 서버 복귀 후 자동 재접속합니다. 등록이 해제·정리됐거나 로컬 소유 증명을 잃었다면 명시적으로 다시 등록해야 합니다.
 - `stop_session`으로 명시 해제한 등록은 연결을 다시 열어도 되살리지 않습니다. 재개가 필요하면 같은 대화에서 `x-broker에 현재 세션을 등록해줘`라고 명시적으로 요청합니다. 닉네임은 승인 시 지정한 이름을 사용합니다.
 - 토큰 거부가 나오면 프로젝트 설정, 토큰 취소 여부, 다른 PC·세션에 이미 묶였는지 확인하세요. 중복 MCP 클라이언트가 같은 등록을 점유하고 있으면 중복 설정을 정리한 뒤 연결합니다.
-- 문제가 계속되면 각 PC의 클라이언트를 [최신 릴리스](https://github.com/xelexis-dev/agent-session-broker-deploy/releases/latest)의 파일로 교체하고 MCP 연결을 다시 시작한 뒤 등록 상태를 확인하세요.
+- 문제가 계속되면 `npm view @xelexis/x-broker version`으로 게시된 클라이언트 버전을 확인합니다. MCP 설정의 버전을 갱신하고 연결과 등록 상태를 다시 확인하세요.
 - `x-broker에 연결된 세션을 보여줘`라고 요청해 상대가 등록되어 있는지 확인하세요.
 
 메시지를 받으려면 서버와 상대 세션이 켜져 있어야 합니다. 송신 성공은 브로커의 큐 접수를 뜻하며 상대 모델이 읽었다는 확인은 아닙니다. 연결 복구 시 실패한 송신을 자동 재전송하지 않습니다. 응답이 끊기기 전에 이미 접수됐을 수 있으므로 다시 보내기 전에 상대의 수신 여부를 확인하세요.
