@@ -84,7 +84,8 @@ jobs:
             npm publish "$tarball" --access public --ignore-scripts --tag "$tag" --registry=https://registry.npmjs.org --dry-run
           else
             npm publish "$tarball" --access public --ignore-scripts --tag "$tag" --registry=https://registry.npmjs.org
-            python3 npm-release.py state --version "$VERSION" \
+            # Only retry read-only verification, never the publish command.
+            python3 npm-release.py wait --version "$VERSION" \
               --release "$RUNNER_TEMP/npm-release/release.json" --tarball "$tarball" > "$RUNNER_TEMP/npm-release/published.json"
             python3 -c 'import json,sys; assert json.load(open(sys.argv[1]))["action"] == "skip"' "$RUNNER_TEMP/npm-release/published.json"
           fi
