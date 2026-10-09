@@ -9,6 +9,7 @@ import re
 import subprocess
 import sys
 import tarfile
+import time
 import urllib.request
 import urllib.error
 
@@ -108,9 +109,9 @@ def verify_bundle(tarball, version, hashes):
     return manifest
 
 
-def npm_view(spec, field, runner):
+def npm_view(spec, field, runner, timeout=60):
     result = runner(['npm', 'view', spec] + ([field] if field else []) + ['--json', '--registry=https://registry.npmjs.org'],
-                    text=True, capture_output=True, timeout=60, check=False)
+                    text=True, capture_output=True, timeout=timeout, check=False)
     try:
         answer = json.loads(result.stdout, object_pairs_hook=strict_object)
     except (ValueError, TypeError):
@@ -196,9 +197,35 @@ def publication_state(tarball, version, runner=subprocess.run, fetcher=fetch_reg
     return {'action': 'publish', 'tag': tag}
 
 
+def wait_for_publication(tarball, version, runner=subprocess.run,
+                         sleeper=time.sleep, clock=time.monotonic, timeout=600):
+    """Read only the exact published version; E404 may lag a successful publish."""
+    version_tuple(version)
+    require(0 < timeout <= 600, 'Invalid propagation timeout')
+    data = Path(tarball).read_bytes()
+    candidate = package_manifest(data)
+    require(candidate.get('name') == PACKAGE and candidate.get('version') == version
+            and valid_fingerprint(candidate.get('xBrokerClientInputs')), 'Invalid package identity')
+    integrity = 'sha512-' + base64.b64encode(hashlib.sha512(data).digest()).decode('ascii')
+    deadline = clock() + timeout
+    interval = 2
+    while True:
+        remaining = deadline - clock()
+        require(remaining > 0, 'Registry propagation timed out')
+        existing = npm_view(PACKAGE + '@' + version, 'dist.integrity', runner,
+                            timeout=min(60, remaining))
+        if existing is not None:
+            require(existing == integrity, 'This version already has different content')
+            return {'action': 'skip'}
+        remaining = deadline - clock()
+        require(remaining > 0, 'Registry propagation timed out')
+        sleeper(min(interval, remaining))
+        interval = min(interval * 2, 30)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=('verify', 'state'))
+    parser.add_argument('command', choices=('verify', 'state', 'wait'))
     parser.add_argument('--version', required=True)
     parser.add_argument('--tarball', type=Path, required=True)
     parser.add_argument('--release', type=Path, required=True)
@@ -207,7 +234,12 @@ def main():
         metadata = json.loads(args.release.read_text(), object_pairs_hook=strict_object)
         hashes = validate_release(metadata, args.version)
         verify_bundle(args.tarball, args.version, hashes)
-        result = publication_state(args.tarball, args.version) if args.command == 'state' else {'verified': True}
+        if args.command == 'state':
+            result = publication_state(args.tarball, args.version)
+        elif args.command == 'wait':
+            result = wait_for_publication(args.tarball, args.version)
+        else:
+            result = {'verified': True}
         print(json.dumps(result, sort_keys=True))
         return 0
     except (ValueError, TypeError, KeyError, OSError, tarfile.TarError, subprocess.SubprocessError):
