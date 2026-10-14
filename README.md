@@ -22,6 +22,8 @@ Claude Code와 Codex 세션 사이의 메시지를 중계합니다. MCP 클라�
 
 ## 2. npm 클라이언트 준비
 
+클라이언트는 Windows·macOS·Linux 모두 npm/npx로만 배포합니다. GitHub Release는 서버 실행파일 4개만 제공합니다.
+
 클라이언트 PC에 Node.js 18 이상과 npm을 준비합니다. macOS ARM64·x64, Linux x64, Windows x64를 지원합니다.
 
 ```sh
