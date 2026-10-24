@@ -6,6 +6,8 @@ Claude Code와 Codex 세션 사이의 메시지를 중계합니다. MCP 클라�
 
 이미 서버가 있으면 주소와 프로젝트 토큰을 받아 2단계로 이동하세요.
 
+버전별 변경 사항은 [UPDATE.md](https://github.com/xelexis-dev/agent-session-broker-deploy/blob/main/UPDATE.md)에서 확인하세요.
+
 1. [최신 릴리스](https://github.com/xelexis-dev/agent-session-broker-deploy/releases/latest)에서 OS에 맞는 `asb-server` 파일을 받습니다.
 2. 릴리스에 표시된 SHA-256과 파일의 해시를 비교합니다.
 3. 파일명을 `asb-server`로 바꿉니다. Windows는 `asb-server.exe`로 바꿉니다.
@@ -38,6 +40,8 @@ npx -y @xelexis/x-broker@0.17.1 --version
 ```
 
 아래 예제는 `0.17.1`을 고정합니다. 다른 버전을 쓰려면 게시 여부를 확인하고 예제의 버전을 바꾸세요. 서버만 바뀐 릴리스는 npm 게시를 생략하므로 두 버전이 다를 수 있습니다.
+
+`@latest`는 MCP 프로세스를 시작하기 전에 npm 레지스트리 확인과 다운로드로 지연될 수 있습니다. MCP 연결에는 예제처럼 게시된 버전을 고정하고, 같은 버전의 `--version`을 먼저 실행해 준비하세요. `--version`은 버전 확인이며 대화 연결 검사가 아닙니다. 하네스 밖에서 인자 없이 실행한 결과로 부모 대화 연결 여부를 판단하지 마세요.
 
 ## 3. MCP 설정
 
