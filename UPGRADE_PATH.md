@@ -5,7 +5,22 @@
 새 릴리스의 GitHub Release는 서버 실행파일 4개만 제공합니다. Windows·macOS·Linux 클라이언트는 `npm view @xelexis/x-broker version`으로 게시된 버전을 확인하고 `npx -y @xelexis/x-broker@<버전> --version`으로 준비한 뒤 MCP를 재연결합니다. 기존 클라이언트 상태와 자격증명은 유지합니다. 서버만 바뀐 릴리스는 npm 게시를 생략할 수 있습니다. 0.14.0 이하의 기존 Release와 클라이언트 다운로드 이력은 유지되며 아래 버전별 실행파일 안내는 당시 배포 방식의 역사 기록입니다.
 
 
-이 안내는 **0.17.1까지**의 업데이트와 데이터 이전 경로를 다룹니다. 실행파일 교체 방법은 [설치 안내](https://github.com/xelexis-dev/agent-session-broker-deploy#readme), 버전별 파일과 변경 사항은 [공개 릴리스](https://github.com/xelexis-dev/agent-session-broker-deploy/releases)에서 확인하세요.
+이 안내는 **0.17.2까지**의 업데이트와 데이터 이전 경로를 다룹니다. 실행파일 교체 방법은 [설치 안내](https://github.com/xelexis-dev/agent-session-broker-deploy#readme), 버전별 파일과 변경 사항은 [공개 릴리스](https://github.com/xelexis-dev/agent-session-broker-deploy/releases)에서 확인하세요.
+
+## 0.17.1 → 0.17.2
+
+1. 서버를 중지하고 **전체 인스턴스 데이터 디렉터리**를 백업합니다. control·registration·bugreport와 기존 클라이언트 상태를 함께 보존합니다.
+2. 서버를 먼저 0.17.2로 교체하고 같은 데이터 경로로 시작합니다. 첫 시작에 기존 프로젝트의 세대 ID를 한 번 부여하고 `controlVersion`을 5로 올립니다. 세대 ID는 재시작·백업 복원 뒤에도 유지됩니다.
+3. 각 PC의 MCP 설정에서 npm 버전을 `@xelexis/x-broker@0.17.2`로 바꿉니다. `npx -y @xelexis/x-broker@0.17.2 --version`으로 준비합니다.
+4. 각 대화에서 Claude는 `/mcp`로 재연결하거나 재시작합니다. Codex는 앱·프로세스를 재시작합니다. Kimi도 MCP를 재연결합니다. `auth_status`의 두 버전, 기존 등록과 실제 메시지 수신을 확인합니다.
+
+서버 0.17.2와 클라이언트 0.17.1은 함께 사용할 수 있습니다. 프로젝트 기록 격리·관리 화면은 서버 업데이트만으로 적용되지만, 프로젝트 종료 안내·상대 등록 기대값·수신 프로세스 보호에는 양쪽 0.17.2가 필요합니다. 구클라이언트의 도구 입력·전달 필드는 그대로이며 구클라이언트끼리의 등록 경합은 보호하지 못합니다. 수신 권한을 다시 켠 뒤 구클라이언트는 재시작해야 합니다.
+
+클라이언트 0.17.2와 서버 0.17.1 조합에서는 프로젝트 종료 판단·수신 프로세스 보호를 사용할 수 없고, `expectRegistrationId`는 `unsupported`로 거부하며 기대값 없이 재전송하지 않습니다. Kimi는 서버와 클라이언트 모두 0.17.2 이상이 필요하며 이전 서버에서는 `unsupported-server`로 안내합니다.
+
+Codex hook의 `turn_id`는 **클라이언트를 0.17.2 이상으로 올린 뒤** 추가하세요. 0.17.1은 알 수 없는 키를 거절합니다. Kimi는 `SessionStart`·`UserPromptSubmit`·`Stop`에 `kimi-hook`을 설정하고 MCP와 같은 상태 경로를 사용합니다. idle 대화를 깨우지 않으며 다음 프롬프트 또는 턴 종료 시 메시지를 받습니다. 설정 예시는 [README](https://github.com/xelexis-dev/agent-session-broker-deploy#readme)를 따르세요.
+
+버전 사이의 데이터 쓰기 호환은 보장하지 않습니다. 롤백은 서버를 중지하고 **업그레이드 전 전체 데이터 백업과 이전 실행파일을 함께 복원**합니다. `control.db`만 되돌리지 마세요. 백업 이후 변경은 전체 복원에 포함되지 않습니다. 서버 재시작 전 미전달 메시지는 보존되지 않으며 실패한 메시지를 자동으로 다시 보내지 않습니다.
 
 ## 0.17.0 → 0.17.1
 

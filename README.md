@@ -36,10 +36,10 @@ Claude Code와 Codex 세션 사이의 메시지를 중계합니다. MCP 클라�
 
 ```sh
 npm view @xelexis/x-broker version
-npx -y @xelexis/x-broker@0.17.1 --version
+npx -y @xelexis/x-broker@0.17.2 --version
 ```
 
-아래 예제는 `0.17.1`을 고정합니다. 다른 버전을 쓰려면 게시 여부를 확인하고 예제의 버전을 바꾸세요. 서버만 바뀐 릴리스는 npm 게시를 생략하므로 두 버전이 다를 수 있습니다.
+아래 예제는 `0.17.2`를 고정합니다. 다른 버전을 쓰려면 게시 여부를 확인하고 예제의 버전을 바꾸세요. 서버만 바뀐 릴리스는 npm 게시를 생략하므로 두 버전이 다를 수 있습니다.
 
 `@latest`는 MCP 프로세스를 시작하기 전에 npm 레지스트리 확인과 다운로드로 지연될 수 있습니다. MCP 연결에는 예제처럼 게시된 버전을 고정하고, 같은 버전의 `--version`을 먼저 실행해 준비하세요. `--version`은 버전 확인이며 대화 연결 검사가 아닙니다. 하네스 밖에서 인자 없이 실행한 결과로 부모 대화 연결 여부를 판단하지 마세요.
 
@@ -57,7 +57,7 @@ npx -y @xelexis/x-broker@0.17.1 --version
     "x-broker": {
       "command": "npx",
       "args": [
-        "-y", "@xelexis/x-broker@0.17.1",
+        "-y", "@xelexis/x-broker@0.17.2",
         "--broker-url", "https://broker.example/mcp?project=brk",
         "--token", "발급받은_토큰"
       ]
@@ -72,7 +72,7 @@ npx -y @xelexis/x-broker@0.17.1 --version
 [mcp_servers.x-broker]
 command = "npx"
 args = [
-  "-y", "@xelexis/x-broker@0.17.1",
+  "-y", "@xelexis/x-broker@0.17.2",
   "--broker-url", "https://broker.example/mcp?project=brk",
   "--token", "발급받은_토큰"
 ]
@@ -81,6 +81,55 @@ args = [
 클라이언트 0.17.1에서 `--nickname 이름`으로 연결 시 요청할 통신 이름을 지정할 수 있습니다. 서버가 직접 등록을 지원하고 토큰이 승인 없는 등록을 허용할 때 사용합니다. 이름이 겹치면 대체 이름을 받을 수 있으므로 `auth_status`의 최종 이름을 확인하세요. 직접 등록을 지원하지 않는 서버는 기존 수동 승인 흐름을 사용합니다. 제한 권한·자동 등록 토큰 발급은 인스턴스 관리자가 설정을 켜야 하며 기본값은 꺼짐입니다.
 
 Codex는 신뢰한 프로젝트의 설정을 읽습니다. 기존 실행파일 방식에서 바꿀 때는 서버 주소, 토큰, 지정한 `--auth-dir`을 유지하세요. 같은 OS 사용자와 인증 상태 디렉터리를 사용하세요.
+
+### Codex 수명 주기 hook
+
+아래 `.codex/hooks.json` 예제의 `turn_id`는 **클라이언트 0.17.2 이상에서만** 전달하세요. 기존 0.17.1 client의 hook 입력 스키마는 정의되지 않은 키를 거절합니다. client를 먼저 0.17.2 이상으로 업그레이드하고 MCP를 재시작한 뒤 설정을 바꾸세요.
+
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [{"hooks": [{"type": "mcp_tool", "server": "x-broker", "tool": "ingress_hook", "input": {"session_id": "${session_id}", "hook_event_name": "${hook_event_name}", "turn_id": "${turn_id}"}, "timeout": 10}]}],
+    "PreToolUse": [{"matcher": "*", "hooks": [{"type": "mcp_tool", "server": "x-broker", "tool": "ingress_hook", "input": {"session_id": "${session_id}", "hook_event_name": "${hook_event_name}", "turn_id": "${turn_id}"}, "timeout": 10}]}],
+    "PostToolUse": [{"matcher": "*", "hooks": [{"type": "mcp_tool", "server": "x-broker", "tool": "ingress_hook", "input": {"session_id": "${session_id}", "hook_event_name": "${hook_event_name}", "turn_id": "${turn_id}"}, "timeout": 10}]}],
+    "Stop": [{"hooks": [{"type": "mcp_tool", "server": "x-broker", "tool": "ingress_hook", "input": {"session_id": "${session_id}", "hook_event_name": "${hook_event_name}", "turn_id": "${turn_id}"}, "timeout": 10}]}],
+    "Interrupt": [{"hooks": [{"type": "mcp_tool", "server": "x-broker", "tool": "ingress_hook", "input": {"session_id": "${session_id}", "hook_event_name": "${hook_event_name}"}, "timeout": 10}]}]
+  }
+}
+```
+
+Codex 0.164.0의 실제 hook과 rollout에서 같은 턴 ID가 전달됨을 확인했습니다. 새 client는 `turn_id`가 없는 기존 설정도 받아 기존 도구 경계·Stop 전달을 유지합니다. 다만 ID가 없거나, 제한된 rollout 끝부분에서 해당 턴의 마지막 시작과 종료 쌍을 검증하지 못하면 Stop 누락 자동 배출은 하지 않고 다음 hook까지 pending을 유지합니다. 시간 경과나 화면의 idle 표시만으로 턴 종료를 추정하지 않습니다.
+
+### Kimi Code (macOS·Linux, turn-boundary 수신)
+
+Kimi는 프로젝트 루트의 `.mcp.json`을 읽습니다. 위 Claude 예제와 같은 형식을 쓰되 **서버와 클라이언트 모두 0.17.2 이상**이 필요합니다. 이전 서버에 연결하면 등록을 시도하기 전에 `unsupported-server`로 안내합니다. Windows Kimi는 지원하지 않습니다.
+
+Kimi 홈 `~/.kimi-code/config.toml`(또는 `$KIMI_CODE_HOME/config.toml`)에 아래 hook을 설정하세요. 자동으로 전역 설정을 바꾸지 않습니다. hook 명령에 broker 토큰을 넣지 마세요.
+
+MCP 설정과 같은 고정 버전을 `npm install -g @xelexis/x-broker@0.17.2`로 설치하고, `command -v x-broker`가 출력한 절대 경로를 아래 hook 명령에 사용하세요. hook의 `PATH`에서 `node`를 찾을 수 있어야 하며, 업그레이드할 때도 전역 설치 버전을 MCP 설정과 같게 유지하세요.
+
+```toml
+[[hooks]]
+event = "SessionStart"
+command = '"/absolute/path/x-broker" kimi-hook --auth-dir "/absolute/path/client-state"'
+timeout = 5
+
+[[hooks]]
+event = "UserPromptSubmit"
+command = '"/absolute/path/x-broker" kimi-hook --auth-dir "/absolute/path/client-state"'
+timeout = 5
+
+[[hooks]]
+event = "Stop"
+command = '"/absolute/path/x-broker" kimi-hook --auth-dir "/absolute/path/client-state"'
+timeout = 5
+```
+
+MCP client의 `--auth-dir`/`--state-dir`와 hook의 경로를 같게 지정하세요. 둘 다 생략하면 동일한 `AGENT_SESSION_BROKER_STATE_DIR` 환경변수와 사용자 기본 경로를 사용합니다. 경로가 다르면 hook이 소켓을 찾지 못해 `kimi-session-unknown`이 됩니다. 긴 상태 경로는 소유권을 확인한 짧은 사용자 전용 디렉터리로 소켓만 옮깁니다. 소켓 bind 실패는 `auth_status`에 `kimi-hook-unavailable`로 표시됩니다.
+
+메시지는 **다음 eligible UserPromptSubmit 또는 Stop hook**에서 전달합니다. idle·실패·이미 Stop으로 이어진 턴은 다음 사용자 입력까지 기다릴 수 있습니다. idle 대화를 깨우지 않습니다. `auth_status`의 `delivery: "turn-boundary"`와 `pendingMessages`를 확인하세요. 공개 세션 목록의 `automaticDeliveryReady: false`는 이 제한을 뜻하며, 큐 접수를 막지 않습니다. 활동은 `unknown / unsupported`입니다.
+
+Kimi 2.3.1은 한 턴의 Stop continuation을 한 번만 실행합니다. 그 뒤 도착한 메시지는 다음 사용자 입력까지 남습니다. client가 batch를 hook으로 넘긴 뒤 Esc·timeout 등으로 hook이 중단되면 그 batch가 유실될 수 있으며, `kimi-hook-handoff` 진단은 handoff만 기록하고 모델 수신을 증명하지 않습니다. 대화가 바뀌면 기존 수신을 차단하고 `reconnect-required`를 표시합니다. 새 대화로 MCP를 재연결한 뒤 명시적으로 연결을 요청하세요.
 
 ## 4. 연결 확인
 
@@ -167,17 +216,17 @@ Codex는 신뢰한 프로젝트의 설정을 읽습니다. 기존 실행파일 �
 
 | 조합 | 사용할 수 있는 기능 |
 | --- | --- |
-| 서버 0.17.1 + 클라이언트 0.17.0 | 기존 연결·메시지와 다른 세션의 `stop_session`을 지원합니다. 새 도구는 클라이언트 0.17.1이 필요합니다. |
-| 클라이언트 0.17.1 + 서버 0.17.0 | 기존 연결·메시지를 지원합니다. `/clear` 인계, 다른 세션 관리, 서버의 현재 권한 조회, `report_bug`는 지원하지 않습니다. |
+| 서버 0.17.2 + 클라이언트 0.17.1 | 기존 연결·메시지와 서버의 프로젝트 기록 격리·관리 화면을 지원합니다. 새 도구 입력과 프로젝트 종료 안내·수신 프로세스 보호에는 클라이언트도 0.17.2가 필요합니다. |
+| 클라이언트 0.17.2 + 서버 0.17.1 | 기존 연결·메시지를 지원합니다. 프로젝트 종료 판단·수신 프로세스 보호는 지원하지 않습니다. `expectRegistrationId`는 `unsupported`, Kimi 연결은 `unsupported-server`로 거부합니다. |
 
-업데이트 순서는 **데이터 백업 → 서버 → npm 클라이언트 0.17.1 → 각 대화 재연결**입니다.
+업데이트 순서는 **전체 인스턴스 데이터 백업 → 서버 0.17.2 → npm 클라이언트 0.17.2 → 각 대화 재연결**입니다.
 
 1. 서버를 중지하고 전체 데이터 디렉터리를 백업합니다. 기존 클라이언트 상태도 보존합니다.
-2. 같은 데이터 경로로 서버 0.17.1을 시작합니다. 실행 중인 세션은 서버가 돌아오면 약 1초 안에 같은 등록으로 자동 재연결합니다. 환경에 따라 더 걸릴 수 있습니다.
-3. MCP 설정의 npm 버전을 `@xelexis/x-broker@0.17.1`로 바꾸고 `npx -y @xelexis/x-broker@0.17.1 --version`으로 준비합니다.
-4. 각 Claude 대화에서 `/mcp`로 재연결하거나 Claude를 재시작합니다. Codex도 각 세션의 앱·프로세스를 재시작해 새 클라이언트를 적용합니다.
+2. 같은 데이터 경로로 서버 0.17.2를 시작합니다. 첫 시작에 프로젝트 세대 ID를 부여하고 `controlVersion`을 5로 올립니다.
+3. MCP 설정의 npm 버전을 `@xelexis/x-broker@0.17.2`로 바꾸고 `npx -y @xelexis/x-broker@0.17.2 --version`으로 준비합니다.
+4. 각 Claude 대화에서 `/mcp`로 재연결하거나 Claude를 재시작합니다. Codex도 각 세션의 앱·프로세스를 재시작하고, Kimi도 MCP를 재연결해 새 클라이언트를 적용합니다.
 
-롤백할 때는 서버를 중지하고 **업그레이드 전 전체 백업과 이전 실행파일을 함께 복원**합니다.
+롤백할 때는 서버를 중지하고 **업그레이드 전 전체 데이터 백업과 이전 실행파일을 함께 복원**합니다. `control.db`만 되돌리지 마세요. 자세한 혼합 버전 제한과 복원 조건은 [업그레이드 안내](https://github.com/xelexis-dev/agent-session-broker-deploy/blob/main/UPGRADE_PATH.md)를 확인하세요.
 
 서버 버전별로 지원하는 클라이언트 최소 버전을 관리합니다. `client-incompatible` 또는 `server-incompatible` 안내가 나오면 표시된 최소 버전을 확인하세요. 클라이언트는 MCP 설정의 npm 버전을 지원 버전으로 바꾼 뒤 Claude에서는 `/mcp`로 재연결하고 Codex에서는 앱을 다시 시작합니다. 서버가 너무 오래된 경우에는 서버도 지원 버전으로 업데이트해야 합니다. `auth_status`에서 클라이언트·서버 버전과 호환 여부를 확인할 수 있습니다.
 
