@@ -5,7 +5,22 @@
 새 릴리스의 GitHub Release는 서버 실행파일 4개만 제공합니다. Windows·macOS·Linux 클라이언트는 `npm view @xelexis/x-broker version`으로 게시된 버전을 확인하고 `npx -y @xelexis/x-broker@<버전> --version`으로 준비한 뒤 MCP를 재연결합니다. 기존 클라이언트 상태와 자격증명은 유지합니다. 서버만 바뀐 릴리스는 npm 게시를 생략할 수 있습니다. 0.14.0 이하의 기존 Release와 클라이언트 다운로드 이력은 유지되며 아래 버전별 실행파일 안내는 당시 배포 방식의 역사 기록입니다.
 
 
-이 안내는 **0.17.2까지**의 업데이트와 데이터 이전 경로를 다룹니다. 실행파일 교체 방법은 [설치 안내](https://github.com/xelexis-dev/agent-session-broker-deploy#readme), 버전별 파일과 변경 사항은 [공개 릴리스](https://github.com/xelexis-dev/agent-session-broker-deploy/releases)에서 확인하세요.
+이 안내는 **0.17.3까지**의 업데이트와 데이터 이전 경로를 다룹니다. 실행파일 교체 방법은 [설치 안내](https://github.com/xelexis-dev/agent-session-broker-deploy#readme), 버전별 파일과 변경 사항은 [공개 릴리스](https://github.com/xelexis-dev/agent-session-broker-deploy/releases)에서 확인하세요.
+
+## 0.17.2 → 0.17.3
+
+1. 서버를 중지하고 control·registration·bugreport를 포함한 전체 인스턴스 데이터와 클라이언트 상태를 백업합니다. ACK 대기열은 메모리 전용이므로 재시작 전에 가능한 한 비웁니다.
+2. 같은 데이터 경로로 서버 0.17.3을 시작합니다. 0.17.2의 controlVersion 5를 유지하며 새 필수 마이그레이션은 없습니다.
+3. npm 클라이언트를 `@xelexis/x-broker@0.17.3`으로 올리고 같은 버전의 `--version`으로 확인합니다. Windows는 **이전 launcher 최초 전환 때 실행 중인 asb-client를 한 번 모두 종료**해야 합니다. 새 launcher는 설치 폴더 밖 검증 사본을 실행하지만 cache fallback 안내가 나온 연결은 다음 npm 갱신 전에 종료해야 합니다.
+4. Claude는 `/mcp` 재연결, Codex는 원래 실행 방식·플래그로 세션을 다시 엽니다. Codex의 세션별 도구 목록과 clientVersion을 확인하고 공유 daemon 재개만으로 새 MCP 실행을 단정하지 않습니다. 같은 등록 ID·이름과 실제 peer 메시지 수신을 확인합니다. Kimi 업그레이드는 미측정입니다.
+
+새 retire·버그 리포트 도구에는 양쪽 0.17.3이 필요합니다. 구 client는 서버 업데이트나 재연결만으로 새 도구가 생기지 않으며 새 client+구server 호출은 미지원 안내로 끝납니다. 메시지 ACK는 양쪽에서 협상할 때 host 인계까지 재전달하며 모델 읽음 확인은 아닙니다. 구 client 하향 시 발급된 미확인 메시지가 남아 있으면 최초 사건부터 고정 최대10분 동안 `storage` 재시도로 보호한 뒤 legacy 전달로 돌아갑니다. 서버 재시작·retire·관리 분리·일시 중지·identity-invalid는 메시지를 폐기합니다.
+
+서버 ACK는 메모리 전용이라 영속 큐 형식 변경은 없습니다. 버그 리포트는 open/closed에 resolution·메모·최근 기록을 추가합니다. 0.17.2에서 읽을 수 있지만 구서버 쓰기는 확장 필드를 잃고32KiB 초과 record의 상태 변경이 거부될 수 있습니다. 무손실 롤백을 보장하지 않습니다. 롤백 시 서버를 중지하고 **업그레이드 전 전체 백업과 이전 실행파일을 함께 복원**하며, 백업 이후 변경과 메모리 대기 메시지는 복원되지 않습니다.
+
+진단 v2는 별도 파일에 기록하고 v1은 읽기만 합니다. 0.17.2로 내리면 v2 진단은 보이지 않으며 재업그레이드하면 함께 조회합니다. 전체 백업에는 삭제 이력 `deletions.db`도 포함하세요. 이미 회수한 자격과 삭제한 리포트는 구버전 실행만으로 복원되지 않습니다. 구서버가 등록을 다시 저장하면 재승인 capability가 없어질 수 있으므로 재업그레이드 후 새 holder의 광고 전까지 자동 회수 대상에서 제외됩니다.
+
+가능하면 Codex daemon 모드를 사용하세요. 새 launcher는 daemon/embedded 재개를 첫 프롬프트 없이 연결할 수 있지만 실행 중 MCP의 버전은 별도로 확인해야 합니다. daemon restart/update는 다른 대화도 끊습니다. steer는 본문 없는 시도 기록을 먼저 남기고 재시작 뒤 대화 기록·대기열로 확인하며, 미확인 메시지와 뒤의 전달은 보류합니다. embedded·Windows 전환과 기존 hook·queue의 짧은 저장 창에는 중복 가능성이 남습니다. Windows에는 steer가 없습니다. 제한 계정의 Windows 검사에서 확인된 제품 결함은 0건이며 테스트·환경 보완 뒤 최종 재검사는 대기 중입니다. Linux/macOS amd64 실기 검증은 별도입니다.
 
 ## 0.17.1 → 0.17.2
 
