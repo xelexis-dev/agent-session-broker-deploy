@@ -24,32 +24,32 @@ Claude Code와 Codex 세션 사이의 메시지를 중계합니다. MCP 클라�
 
 연결 요청 시 승인 없이 등록하는 토큰은 발급할 때 등록 한도와 수명을 선택합니다. 기본값은 8개·30일이며, 한도는 1~100000개 또는 **무제한**, 수명은 1~36500일 또는 **무기한**으로 지정할 수 있습니다(서버 0.17.0부터). 프로젝트 전체 등록 한도와 요청 제한은 그대로 적용됩니다. 무제한 또는 이전 범위(64개·90일)를 넘는 토큰을 발급한 뒤 서버를 0.16 이하로 내리려면 업그레이드 전 데이터 백업을 복원해야 합니다.
 
-클라이언트 연결에는 HTTPS를 사용하세요. 보호된 내부망에서 HTTP를 사용하려면 **인스턴스 설정 → HTTP 연결 허용**을 켜세요.
+클라이언트 연결에는 HTTPS를 사용하세요. **HTTP 연결 허용**이 꺼져 있으면 `/mcp`와 OAuth 자격증명 경로는 표시 헤더가 없는 평문 요청도 403으로 거부합니다. localhost도 예외가 아닙니다. TLS를 종료하는 proxy 뒤에서는 같은 호스트의 proxy라도 서버에 `--trusted-proxy <proxy CIDR>`를 지정하고, proxy가 외부 입력을 전달하지 않고 `X-Forwarded-Proto`를 단일 원래 scheme 값으로 **덮어써야** 합니다. 기본 신뢰 proxy는 없으며, 신뢰한 proxy의 값이 없거나 중복·목록·잘못된 값이면 HTTPS 증명으로 쓰지 않습니다. 보호된 내부망에서 HTTP를 사용하려면 **인스턴스 설정 → HTTP 연결 허용**을 켜세요.
 
-## 2. npm 클라이언트 준비
+## 2. 클라이언트 준비
 
-클라이언트는 Windows·macOS·Linux 모두 npm/npx로 배포합니다. GitHub Release는 서버 실행파일 4개를 제공합니다.
+<!-- xbroker-docs:setup -->
+### 설치와 MCP 설정
 
-클라이언트 PC에 Node.js 18 이상과 npm을 준비합니다. macOS ARM64·x64, Linux x64, Windows x64를 지원합니다.
-
-대화별 클라이언트 상태는 30일 동안 사용하지 않으면 자동 삭제하며, 진단 기록은 14일 후 정리합니다.
+Node.js 18 이상과 npm이 필요합니다. Windows x64, macOS ARM64·x64, Linux x64를 지원합니다. 기본은 게시된 버전을 고정한 전역 설치입니다.
 
 ```sh
 npm view @xelexis/x-broker version
-npx -y @xelexis/x-broker@0.17.3 --version
+npm install -g @xelexis/x-broker@0.18.0
+x-broker --version
 ```
 
-아래 예제는 `0.17.3`을 고정합니다. 다른 버전을 쓰려면 게시 여부를 확인하고 예제의 버전을 바꾸세요. 서버만 바뀐 릴리스는 npm 게시를 생략하므로 두 버전이 다를 수 있습니다.
+예제는 `0.18.0`을 고정합니다. 서버만 바뀐 릴리스는 npm 게시를 생략하므로 서버와 클라이언트 버전이 다를 수 있습니다. 다른 버전은 게시 여부를 확인하고 설치 버전을 바꾸세요. `--version`은 버전 확인이며 대화 연결 검사가 아닙니다.
 
-`@latest`는 MCP 프로세스를 시작하기 전에 npm 레지스트리 확인과 다운로드로 지연될 수 있습니다. MCP 연결에는 예제처럼 게시된 버전을 고정하고, 같은 버전의 `--version`을 먼저 실행해 준비하세요. `--version`은 버전 확인이며 대화 연결 검사가 아닙니다. 하네스 밖에서 인자 없이 실행한 결과로 부모 대화 연결 여부를 판단하지 마세요.
+대안으로 `npx -y @xelexis/x-broker@0.18.0`을 쓸 수 있지만 세션마다 약 100 MB의 npm 프로세스 하나가 계속 남습니다. 이때 아래 `command`를 `npx`로 바꾸고 `args` 앞에 `"-y", "@xelexis/x-broker@0.18.0"`을 추가하세요. `@latest`는 시작 때 레지스트리 확인과 다운로드로 늦어질 수 있으므로 버전을 고정하세요.
+
+macOS·Linux에서는 execve를 지원하는 Node의 전역 wrapper가 client로 교체됩니다. **Windows는 execve가 없어 어느 설치 방식이든 node relay가 남으며, 전역 설치는 npm exec 부모 프로세스를 제거합니다.**
 
 ## 3. MCP 설정
 
-Windows 클라이언트 0.17.3부터는 `%LOCALAPPDATA%\xelexis\x-broker\client-cache\v1\win32-x64`의 버전·SHA-256별 검증된 사본을 실행하므로, 새 launcher로 시작한 세션을 유지한 채 npm 패키지를 업그레이드할 수 있습니다. **0.17.2 이하의 이전 launcher에서 처음 업그레이드할 때는 실행 중인 asb-client를 한 번 모두 종료하세요.** 실행 중인 세션은 MCP를 다시 시작할 때 새 버전을 적용합니다. 캐시 준비가 실패하면 stderr에 한 줄 안내 후 설치 원본을 실행하므로, 그 세션이 실행 중인 동안은 업그레이드 전에 종료해야 합니다. 새 캐시를 만든 실행은 시작 성공 후 게시 7일이 지난 이전 사본(최대 16개)과 1시간 지난 staging을 정리하며, 잠긴 파일은 남깁니다.
+기존 설정이 있으면 `x-broker` 항목만 추가하거나 교체하세요. 서버 주소, `project=brk`, `발급받은_토큰`을 실제 값으로 바꾸세요. 토큰이 있는 파일은 Git이나 공유 폴더에 올리지 마세요.
 
-**Windows·macOS·Linux 모두 `command`는 `npx`입니다.** 사용할 프로그램의 예제를 작업 폴더에 저장하세요. 기존 설정이 있으면 `x-broker` 항목만 추가하거나 교체하세요.
-
-서버 주소, `project=brk`, `발급받은_토큰`을 실제 값으로 바꾸세요. 토큰이 있는 파일은 Git이나 공유 폴더에 올리지 마세요.
+MCP `args`에 `"--tool-profile", "worker"`를 추가하면 모든 하네스에서 관리·버그 조회 도구 7개를 목록에서 숨기고 해당 호출을 `tool-not-in-profile`로 거부합니다. 기본은 `full`이며 서버 권한이나 보안 경계를 바꾸지 않습니다.
 
 **Claude Code — `.mcp.json`**
 
@@ -57,9 +57,8 @@ Windows 클라이언트 0.17.3부터는 `%LOCALAPPDATA%\xelexis\x-broker\client-
 {
   "mcpServers": {
     "x-broker": {
-      "command": "npx",
+      "command": "x-broker",
       "args": [
-        "-y", "@xelexis/x-broker@0.17.3",
         "--broker-url", "https://broker.example/mcp?project=brk",
         "--token", "발급받은_토큰"
       ]
@@ -72,13 +71,19 @@ Windows 클라이언트 0.17.3부터는 `%LOCALAPPDATA%\xelexis\x-broker\client-
 
 ```toml
 [mcp_servers.x-broker]
-command = "npx"
+command = "x-broker"
 args = [
-  "-y", "@xelexis/x-broker@0.17.3",
   "--broker-url", "https://broker.example/mcp?project=brk",
   "--token", "발급받은_토큰"
 ]
 ```
+
+Codex는 신뢰한 프로젝트의 설정만 읽습니다. 같은 OS 사용자와 인증 상태 디렉터리를 유지하세요. MCP 재연결 후 에이전트에게 이 대화를 연결해 달라고 요청할 때만 `attach_session`을 호출합니다. 기존 등록은 자동 복구합니다. `auth_status`로 등록 이름·clientVersion·serverVersion을 확인하세요. 승인 코드가 나오면 관리 화면에서 승인합니다. 상세 재연결은 `xbroker_docs topic=upgrade`, 연결 오류는 `topic=errors`를 읽으세요.
+<!-- /xbroker-docs:setup -->
+
+대화별 클라이언트 상태와 steer 시도 기록은 30일 동안 사용하지 않으면 자동 삭제하며(불확실한 pending 시도는 재연결로 해소될 때까지 보존), 진단 기록은 14일 후 정리합니다.
+
+Windows 클라이언트 0.17.3부터는 `%LOCALAPPDATA%\xelexis\x-broker\client-cache\v1\win32-x64`의 버전·SHA-256별 검증된 사본을 실행하므로, 새 launcher로 시작한 세션을 유지한 채 npm 패키지를 업그레이드할 수 있습니다. **0.17.2 이하의 이전 launcher에서 처음 업그레이드할 때는 실행 중인 asb-client를 한 번 모두 종료하세요.** 실행 중인 세션은 MCP를 다시 시작할 때 새 버전을 적용합니다. 캐시 준비가 실패하면 stderr에 한 줄 안내 후 설치 원본을 실행하므로, 그 세션이 실행 중인 동안은 업그레이드 전에 종료해야 합니다. 새 캐시를 만든 실행은 시작 성공 후 게시 7일이 지난 이전 사본(최대 16개)과 1시간 지난 staging을 정리하며, 잠긴 파일은 남깁니다.
 
 클라이언트 0.17.1에서 `--nickname 이름`으로 연결 시 요청할 통신 이름을 지정할 수 있습니다. 서버가 직접 등록을 지원하고 토큰이 승인 없는 등록을 허용할 때 사용합니다. 이름이 겹치면 대체 이름을 받을 수 있으므로 `auth_status`의 최종 이름을 확인하세요. 직접 등록을 지원하지 않는 서버는 기존 수동 승인 흐름을 사용합니다. 제한 권한·자동 등록 토큰 발급은 인스턴스 관리자가 설정을 켜야 하며 기본값은 꺼짐입니다.
 
@@ -86,7 +91,7 @@ Codex는 신뢰한 프로젝트의 설정을 읽습니다. 기존 실행파일 �
 
 ### Codex 재개 실행기 (프롬프트 없는 연결)
 
-macOS·Linux에서 정확한 UUID를 지정한 재개 실행기는 daemon과 embedded 두 모드를 지원합니다. 아래를 `codex-resume.sh`로 저장하고 `sh codex-resume.sh <대화 UUID>`로 실행하세요. `-c model_reasoning_effort=medium` 같은 embedded 옵션을 주면 기존 PID claim 경로를 사용합니다. MCP 설정과 같은 npm client 버전이 필요합니다. 기본 `XB_VERSION=0.17.3`을 실제 MCP 고정 버전에 맞추세요. `--auth-dir`을 따로 썼다면 같은 절대 경로를 `AGENT_SESSION_BROKER_STATE_DIR`로 지정합니다. 사용자·프로젝트 설정은 바꾸지 않습니다.
+macOS·Linux에서 정확한 UUID를 지정한 재개 실행기는 daemon과 embedded 두 모드를 지원합니다. 아래를 `codex-resume.sh`로 저장하고 `sh codex-resume.sh <대화 UUID>`로 실행하세요. `-c model_reasoning_effort=medium` 같은 embedded 옵션을 주면 기존 PID claim 경로를 사용합니다. MCP 설정과 같은 npm client 버전이 필요합니다. 기본 `XB_VERSION=0.18.0`을 실제 MCP 고정 버전에 맞추세요. `--auth-dir`을 따로 썼다면 같은 절대 경로를 `AGENT_SESSION_BROKER_STATE_DIR`로 지정합니다. 사용자·프로젝트 설정은 바꾸지 않습니다.
 
 - embedded 옵션(`-c`·`--config`·`--enable`·`--disable`·`--search`·`--no-daemon`·`--dangerously-bypass-hook-trust`)과 명시 `--remote`는 함께 쓸 수 없습니다. 직접 `codex resume <UUID> ...`를 실행하면 기존 첫 프롬프트 경로를 쓸 수 있습니다.
 - `--remote`는 하나만 허용합니다. 기본 daemon은 CODEX_HOME의 socket 별칭을 TUI에 넘기고 helper는 정규 대상의 inode·peer를 검증합니다. 직접 지정한 endpoint는 그대로 쓰며, ws/wss endpoint는 helper 없이 전달합니다. `--last`·`--all`·`--include-non-interactive`는 거절하며 `--` 뒤는 그대로 넘깁니다.
@@ -188,7 +193,7 @@ until canonical_socket; do
 done
 helper_socket=$socket
 case "$helper_socket" in /*) ;; *) helper_socket="$PWD/$helper_socket" ;; esac
-npx -y "@xelexis/x-broker@${XB_VERSION:-0.17.3}" codex-resume-helper \
+npx -y "@xelexis/x-broker@${XB_VERSION:-0.18.0}" codex-resume-helper \
     --thread "$t" --pid "$$" --codex-home "$home" --socket "$helper_socket" --inode "$inode" \
     </dev/null >/dev/null 2>&1 &
 # Rotate the original positional arguments; never join or eval caller input.
@@ -247,7 +252,7 @@ Kimi는 프로젝트 루트의 `.mcp.json`을 읽습니다. 위 Claude 예제와
 
 Kimi 홈 `~/.kimi-code/config.toml`(또는 `$KIMI_CODE_HOME/config.toml`)에 아래 hook을 설정하세요. 자동으로 전역 설정을 바꾸지 않습니다. hook 명령에 broker 토큰을 넣지 마세요.
 
-MCP 설정과 같은 고정 버전을 `npm install -g @xelexis/x-broker@0.17.3`로 설치하고, `command -v x-broker`가 출력한 절대 경로를 아래 hook 명령에 사용하세요. hook의 `PATH`에서 `node`를 찾을 수 있어야 하며, 업그레이드할 때도 전역 설치 버전을 MCP 설정과 같게 유지하세요.
+MCP 설정과 같은 고정 버전을 `npm install -g @xelexis/x-broker@0.18.0`로 설치하고, `command -v x-broker`가 출력한 절대 경로를 아래 hook 명령에 사용하세요. hook의 `PATH`에서 `node`를 찾을 수 있어야 하며, 업그레이드할 때도 전역 설치 버전을 MCP 설정과 같게 유지하세요.
 
 ```toml
 [[hooks]]
@@ -281,7 +286,7 @@ Kimi 2.3.1은 한 턴의 Stop continuation을 한 번만 실행합니다. 그 �
 
 이 연결 요청 방식은 클라이언트 0.17.1부터 적용됩니다. 새 대화가 시작되는 것만으로 등록하지 않습니다. 0.17.0 이하 client는 시작 시 자동 등록을 시도하는 기존 동작을 유지합니다.
 
-연결되지 않으면 `npx` 실행, 서버 주소, 프로젝트 접속 허용, 토큰 상태를 확인하세요. 최초 다운로드가 늦으면 2단계의 `--version` 명령을 먼저 실행하세요.
+연결되지 않으면 `x-broker --version`(npx 사용자는 고정 버전의 `--version`), 서버 주소, 프로젝트 접속 허용, 토큰 상태를 확인하세요. 최초 다운로드가 늦으면 2단계의 `--version` 명령을 먼저 실행하세요.
 
 업데이트 전에는 서버를 중지하고 데이터 디렉터리를 백업하세요. [업그레이드 안내](https://github.com/xelexis-dev/agent-session-broker-deploy/blob/main/UPGRADE_PATH.md)를 확인하고 같은 데이터 경로를 유지하세요.
 
@@ -297,7 +302,9 @@ Kimi 2.3.1은 한 턴의 Stop continuation을 한 번만 실행합니다. 그 �
 
 ### 무응답 세션 등록
 
-오래 통신하지 않은 세션도 등록 목록에 `missing`(응답 없음)으로 남습니다. 상태 확인 probe가 무응답이거나 식별 확인에 실패해도 자동 삭제하지 않습니다. 같은 세션이 재연결하면 기존 등록 ID와 이름을 이어 씁니다. 세션 자격증명이 만료되면 재승인 후 연결할 수 있으며 등록 행은 유지됩니다. 관리 화면에서 등록을 해제하면 이름이 바로 풀립니다. `stop_session`으로 연결을 해제하면 관리 화면 목록 조회 또는 약 1시간 10분 뒤 sweep에서 기록이 정리될 수 있습니다. 현재 holder가 정리 후 명시 재승인을 지원하고 부모 프로젝트 토큰을 설정한 새 client라면, 그 기록에 정확히 대응하는 자동 승인 자격도 정리 직전에 회수하여 이름 예약을 풉니다. 수동 승인·구 client·세션 자격만 설정한 client는 기존처럼 자격 만료(통상 7일 idle) 또는 `retire_session`까지 이름을 예약합니다. 명시적 재등록 교체·프로젝트 삭제도 등록을 제거할 수 있습니다. 등록 상한(1,024개)에 도달하면 새 등록을 거부하므로 관리자에게 오래된 세션의 연결 해제를 요청하세요.
+통신이 끊긴 등록은 목록에 `missing`(응답 없음)으로 남아 재연결할 수 있습니다. 다만 마지막 통신 후 30일 이상이고 상태 확인 probe 기한도 지난 비정지 등록은 자동으로 연결 해제됩니다. 이후 약 1시간 10분이 지나면 기존 정리 경로가 기록을 제거합니다. 일시 중지된 등록은 제외하며 재시작 유예와 순차 처리 때문에 정리가 늦어질 수 있습니다. 기록이 남아 있는 동안에는 같은 등록 ID와 이름을 이어 쓸 수 있고, 연결 해제 상태에서도 제거 전까지 등록의 이름을 예약합니다.
+
+기록 제거 시 정리 후 명시 재승인을 지원하는 현재 holder의 자동 승인 증명이 정확히 맞으면 바인딩과 교환 기록을 해제하고, 해당 세션 자격이 아직 유효할 때만 회수합니다. 이미 만료·회수되었거나 보존 기한이 지나 자격이 없어도 일치하는 자동 바인딩은 정리됩니다. 수동 승인·구 client·증명이 맞지 않는 경우에는 제어 상태를 보존하므로 모든 이름이나 자격의 해제를 보장하지 않습니다. 기록이 제거된 대화는 사용자의 명시적 `attach_session` 요청으로 재승인을 받습니다. 등록 상한은 1,024개이며 필요한 경우 관리자에게 연결 해제 또는 retire를 요청하세요.
 
 ### heartbeat 진단 확인
 
@@ -326,7 +333,9 @@ Kimi 2.3.1은 한 턴의 Stop continuation을 한 번만 실행합니다. 그 �
 
 ### 세션 관리 권한
 
-서버 0.17.1부터 `session:manage`로 이 세션의 연결을 해제하고, 토큰 소유자가 관리할 수 있는 다른 세션의 연결 해제·일시 중지·재개를 요청할 수 있습니다. 서버 업데이트 후에는 이 권한을 가진 기존 토큰에도 같은 규칙이 적용됩니다.
+서버 0.17.1부터 `session:manage`로 자기 연결 해제와 소유권이 허용하는 다른 세션의 관리가 가능합니다. 기존 토큰도 같습니다.
+
+일시 중지 등록은 제외하며, 마지막 통신 후 30일과 probe 기한을 모두 넘은 등록은 자동 분리한 뒤 약 70분 후 정리합니다. 재시작 유예와 순차 처리로 지연될 수 있고 이름·자격 해제는 조건부입니다.
 
 - Owner 토큰은 같은 프로젝트의 모든 세션을 관리합니다. Developer 토큰은 같은 소유자의 세션만 관리합니다.
 - 이 세션 자신은 `stop_session`으로 연결 해제만 할 수 있습니다. 자신의 `suspend_session`·`unsuspend_session` 호출은 허용되지 않습니다. 소유자 정보가 없는 기존 토큰도 자기 연결 해제만 할 수 있습니다.
@@ -357,33 +366,34 @@ rename_session의 nickname-in-use는 holder에 따라 live-session·inactive-reg
 
 ### Codex 실행 방식
 
-가능하면 **daemon 모드**를 사용하세요. Codex 0.164.0에서는 `codex` 또는 `codex resume <대화 UUID>`를 `-c`, `--enable`, `--disable`, `--search` 없이 실행하면 CODEX_HOME별 공유 daemon이 자동 시작됩니다. 모델·effort는 `-c` 대신 `config.toml`에 설정합니다. daemon은 `codex app-server daemon start`, `stop`, `restart`, `version`으로 관리합니다.
+프로젝트에 맞춰 daemon과 embedded 모드를 선택하고, 한 대화에서는 모드를 유지하세요. Codex 0.164.0에서는 `codex` 또는 `codex resume <대화 UUID>`를 `-c`, `--enable`, `--disable`, `--search` 없이 실행하면 CODEX_HOME별 공유 daemon이 자동 시작됩니다. 모델·effort는 `-c` 대신 `config.toml`에 설정합니다. daemon은 `codex app-server daemon start`, `stop`, `restart`, `version`으로 관리합니다.
+
+daemon 모드의 hook·MCP 서버는 daemon 환경에서 실행되므로 TUI를 여는 셸의 환경변수·`-c` 옵션은 적용되지 않습니다. hook·MCP에 필요한 대화별 값은 `config.toml`(예: MCP 서버의 `env`)에 설정하거나 embedded(`-c`)를 사용하되, `CODEX_THREAD_ID`는 넣지 마세요.
 
 daemon 즉시 전달은 **`message.ack.v1`을 지원하는 서버(0.17.3 이상)와 Codex 수명 주기 hook**이 있어 ACK가 활성인 연결에서만 동작합니다. 실행 중인 도구에는 즉시, 생성 중에는 hook 경계를 최대 10초 기다린 뒤 `turn/steer`로 메시지를 넣습니다. 그 밖에는 기존 도구 경계 전달을 사용합니다. 생성 중 주입하면 화면의 응답이 다시 써질 수 있고, 메시지가 계속 오면 재시작이 여러 번 생길 수 있습니다. 실행 중 명령은 유지됩니다. 기본 켜짐이며 client 인자 `--codex-steer off`로 끌 수 있습니다(`--codex-steer on`으로 켬). 새 steer 전에 읽기 전용 실험 API `thread/queue/list` 지원을 확인합니다. 지원하지 않으면 해당 binding의 steer를 `unsupported-codex`로 끄고 기존 hook·queue 경로를 사용합니다.
 
 - 결과가 불확실한 steer는 본문 없는 시도 기록을 유지합니다. `codex app-server daemon stop`·`restart`나 client 재시작, 같은 등록의 lease·binding 교체 뒤에도 확인된 thread 전체에서 정확한 `clientId`와 envelope를 찾아 연속 구간만 ACK합니다. 대상 turn 종료 뒤 빈 queue와 새 전체 조회로 미주입을 확인해야 기존 경로로 넘기며, 조회·저장 실패는 시간으로 풀지 않습니다. 등록·epoch 교체는 옛 시도를 ACK 없이 은퇴시킵니다. `--codex-steer off`도 이미 기록한 시도의 조회는 계속합니다.
 - 중복 방지는 steer 전송 인계 범위입니다. 일반 hook·queue 인계와 저장 사이의 ms 창, 구 client 롤백, 확인된 모드 전환(현재 Windows)에는 중복될 수 있습니다. 정확히 판별하지 못한 embedded 전환이나 일시적인 socket·검증 실패는 해제 근거가 아니므로 보류합니다.
-- embedded `-c`와 Windows는 도구 경계·Stop·native queue로 받습니다. 위 재개 실행기를 쓰면 daemon에서도 첫 프롬프트 없이 연결을 재개합니다. 실행기 없는 재개는 첫 프롬프트(hook 설치 시) 또는 `auth_status` 호출이 필요합니다.
-- TUI를 닫아도 daemon과 대화의 MCP·등록이 살아 있을 수 있습니다. 대화를 끝낼 때 등록을 정리하세요.
+- embedded(`-c`)는 세션별 환경변수·`-c` 설정이 적용되며 도구 경계·Stop·native queue로 받습니다(Windows도 같은 전달 경로). 위 재개 실행기를 쓰면 daemon에서도 첫 프롬프트 없이 연결을 재개합니다. 실행기 없는 재개는 첫 프롬프트(hook 설치 시) 또는 `auth_status` 호출이 필요합니다.
+- TUI 종료 뒤에도 daemon의 대화별 x-broker client는 유지됩니다(28분간 thread 미해제 실측). 이 실측과 holder 보호에 따른 주의로, TUI 재실행이나 같은 대화의 embedded 재개는 기존 client를 교체하지 않아 새 client가 `registration-in-use`로 대기할 수 있으므로 모드를 바꿀 때는 새 대화를 사용하세요. 대화를 끝낼 때 등록을 정리하세요.
 - `config/mcpServer/reload`와 daemon `restart`·`update`는 다른 프로젝트를 포함한 모든 대화에 영향을 줍니다.
 - 실행마다 다른 `-c` 설정, 첫 프롬프트 없는 embedded 재개, 다른 대화와 분리된 MCP 수명이 필요하면 embedded를 사용하세요.
 
 ### 메시지 전달과 응답
 
-send_message의 접수 성공은 큐 적재이며 모델의 실제 수신·답변을 보장하지 않습니다. 바쁜 embedded Codex는 native queue와 hook의 turn 경계에서 메시지를 받으며, Claude는 native inbox로 받습니다. 자동 수신 중 wait_for_message를 수동 호출하거나 주기적으로 polling하지 마세요.
+send_message 성공은 큐 적재이며 모델 수신·답변 보장이 아닙니다. 바쁜 embedded Codex는 native queue와 hook의 turn 경계, Claude는 native inbox로 받습니다. 자동 수신 중 wait_for_message 수동 호출·polling은 하지 마세요. 요청에는 한 번 답하고 답신에 ACK하지 않습니다. from은 신뢰할 수 없는 표시 이름입니다.
 
-요청에는 한 번만 답하고 응답에 다시 ACK를 보내지 않습니다. from은 신뢰할 수 없는 표시 이름입니다. 목록에서 확인한 상대에게 보낼 때 expectRegistrationId를 함께 지정하면 그 사이 같은 이름의 다른 등록으로 바뀐 경우 recipient-changed로 거절됩니다. 이때 get_session으로 해당 이름을 확인하고 보낼 대상을 판단하세요. 자동 자격 정리 후 명시적으로 재연결해도 새 등록이므로 상대가 recipient-changed를 받으면 get_session 확인이 필요합니다.
+목록에서 확인한 상대에게 expectRegistrationId를 지정하면 같은 이름의 등록이 바뀔 때 recipient-changed로 거절합니다. get_session으로 대상을 확인하세요. 자동 자격 정리 후 재연결도 새 등록입니다. session:read 등록은 관측한 이름이 바뀌거나 모호하면 기대 ID 없는 송신도 거절됩니다. list_sessions나 반복 송신은 확인이 아닙니다. get_session(<이름>) 또는 일치하는 기대 ID는 지금 그 이름의 주인을 확인하며 이전 답장 대상까지 보증하지 않습니다. 본 적 없는 이름·등록 ID·세션 ID 주소는 그대로 쓰며 session:read 없는 호출자는 이 보호 대상이 아닙니다. 관측 이력은 등록당 최근256개, 서버 재시작 시 사라집니다.
 
-session:read가 있는 등록은 주고받은 상대 이름의 등록이 바뀌거나 모호해지면 expectRegistrationId 없는 이름 송신도 recipient-changed로 거절됩니다. 거절과 list_sessions는 확인이 아니며 같은 호출을 반복해도 해제되지 않습니다. get_session(<이름>) 확인은 이 세션이 이제 그 이름의 새 주인과 대화한다는 세션 단위 확인이고, 이전 메시지의 답장 모두가 새 주인 대상이라는 증명은 아닙니다. 명시적으로 일치하는 expectRegistrationId도 그 이름을 확인합니다. 본 적 없는 이름과 등록 ID·세션 ID 주소는 그대로 사용할 수 있습니다. session:read 없는 호출자는 이 보호 대상이 아닙니다. 관측 이력은 등록당 최근 갱신256개이며 서버 재시작 시 사라집니다.
+대기 메시지는 영속 저장이 아닙니다. stop/retire·재시작 때 사라질 수 있으므로 중요한 결과는 작업 로그에 보존하세요. 새 큐는 수신자당32건, JSON envelope는12000바이트입니다. 본문에 토큰·키·비밀번호를 넣지 마세요.
 
-대기 메시지는 영속 저장이 아닙니다. stop/retire 또는 서버 재시작 때 사라질 수 있습니다. 중요한 작업 결과는 작업 로그에 보존하세요.
+message.ack.v1을 협상한 durable 등록은 살아 있는 서버에서 at-least-once 재전달합니다. ACK는 host 인계이며 모델 읽음이 아닙니다. Claude inbox는 Post frame 쓰기 완료, legacy channel은 활성화 후 notify 쓰기 완료, Codex idle은 native queue 종료0, busy는 hook 응답 쓰기 완료, daemon steer는 성공 응답 또는 thread 전체의 정확한 clientId·envelope 확인이 기준입니다. Kimi helper v2는 stdout 뒤 수신 확인이 필요하며 구 helper는 ACK를 협상하지 않습니다. client는 registration+epoch별 완료 연속 구간을 본문 없이 저장합니다. steer 시도 기록은 재시작 중복을 막지만 일반 hook·queue는 인계와 저장 사이 중복될 수 있습니다.
 
-지원 서버와 client가 durable 등록에서 message.ack.v1을 협상하면, 서버 프로세스가 살아 있는 동안 미확인 메시지를 재전달하는 at-least-once 방식으로 동작합니다. ACK는 host로의 전송 인계이며 모델 읽음·답변 확인이 아닙니다. Claude inbox는 Post의 로컬 frame 쓰기 완료, legacy channel은 활성화 후 notify 쓰기 완료, Codex idle은 native queue 종료 코드 0, busy는 hook 응답 쓰기 완료, daemon steer는 성공 응답 또는 thread 전체의 정확한 clientId·envelope 확인이 기준입니다. Kimi는 helper v2가 stdout을 쓴 뒤 수신 확인을 보내야 합니다. 구 helper는 ACK를 협상하지 않습니다.
+미확인 창은32건·64KiB, 새 큐는32건입니다. 재연결 합계 최대64건을 보존하며 ACK 지연은 새 적재에 역압을 줍니다. 서버 재시작·retire·관리 분리·일시 중지·identity-invalid는 메시지를 폐기합니다. 구 client 하향 시 미확인 메시지는 최초 상실/하향부터 최대10분 보호한 뒤 payload를 남겨 legacy at-most-once로 돌아갑니다. Codex daemon은 ACK와 hook 활성 시 turn/steer, embedded는 hook 경계로 전달합니다.
 
-client는 registration+epoch별 완료 연속 구간을 본문 없이 저장합니다. steer는 시도 기록으로 재시작 중복을 막고, 일반 hook·queue는 인계와 저장 사이 ms 창에 중복될 수 있습니다. ACK로 모델 읽음·답변을 추론하지 마세요.
+첨부: send_message에 attachment="상대경로"를 더하면 이 대화 CWD 아래 파일1개를 보냅니다. 관리자 허용(기본 꺼짐), 파일당100MiB, ACK 지원 Claude/Codex 수신자가 필요합니다. home·볼륨 루트·네트워크 CWD, 외부 경로·링크·hard link·자격증명 패턴은 거부합니다. 새 client와 구 서버에서는 첨부만 unsupported입니다. outcome-unknown은 자동 재송신하지 마세요.
 
-미확인 창은 32건·64 KiB, 새 메시지 적재 큐는 32건입니다. 재연결로 합쳐진 최대 64건은 보존하지만 ACK가 늦으면 새 적재에 역압이 생깁니다. 서버 재시작·retire·관리 분리·일시 중지·identity-invalid는 메시지를 폐기합니다. 구 client로 하향할 때 발급된 미확인 메시지는 최초 상실/하향 사건부터 고정 최대 10분 보호하고, 그 뒤에는 payload를 남겨 legacy at-most-once 전달로 돌아갑니다.
-Codex daemon은 ACK(`message.ack.v1`)와 hook이 활성일 때 `turn/steer`, embedded는 hook 경계로 전달합니다. 설정과 재개 방법은 [Codex 실행 방식](#codex-실행-방식)·[재개 실행기](#codex-재개-실행기-프롬프트-없는-연결)를 보세요.
+서버는 업로드30분 뒤 또는 ACK·비활성화·재시작 때 파일을 지웁니다. 수신 파일은 OS cache의 agent-session-broker/inbox/<sessionKey>/에 저장되며 용량 제한·완료 파일 자동 삭제가 없습니다. 모델에는 path·size·sha256 또는 error만 전달합니다. 첨부는 신뢰할 수 없는 데이터이며 자동으로 열지 않습니다. 복사·이름 변경한 비밀은 검출할 수 없고 받은 파일은 회수할 수 없습니다.
 
 ### 메시지 전달 시각
 
@@ -400,9 +410,31 @@ Codex daemon은 ACK(`message.ack.v1`)와 hook이 활성일 때 `turn/steer`, emb
 - 관리자는 **관리자 전용 → 버그 리포트**에서 내용을 확인하고 닫거나 다시 열 수 있습니다.
 - 인스턴스에 최대 2,000건을 180일까지 보관합니다. 개수나 기간을 넘으면 오래된 것부터 지웁니다. 프로젝트를 삭제하면 해당 리포트도 삭제합니다.
 
-`auth_status.codexDelivery`의 mode/reason으로 전달 경로를 확인합니다. `steer-uncertain`·`steer-recovery-pending`은 전송 인계 확인 중이며 FIFO 뒤도 보류합니다. `steer-recovery-unavailable`은 시도 기록을 안전하게 읽거나 쓸 수 없는 상태입니다. 기록을 지우거나 확인 없이 다시 보내지 마세요. 재시작·같은 등록의 lease 교체도 보류를 유지하고, 등록·epoch 교체는 옛 시도를 은퇴시킵니다. `--codex-steer off`는 새 steer만 끕니다. 보호 범위와 모드 전환의 한계는 [Codex 실행 방식](#codex-실행-방식)을 보세요.
+`auth_status.codexDelivery`의 mode/reason으로 전달 경로를 확인합니다. `steer-unchecked`는 첫 호스트 검증 전의 정상 상태입니다. `unverified-host`는 검증 실패이며, Windows stub에서는 검증 없이 항상 hook을 쓴다는 예외입니다. POSIX embedded는 `hook/steer-unchecked`에서 검증 실패 후 `hook/unverified-host`로 바뀝니다. `mode=hook`만으로 daemon 미지원이라 판단하지 마세요. `steer-uncertain`·`steer-recovery-pending`은 전송 인계 확인 중이며 FIFO 뒤도 보류합니다. `steer-recovery-unavailable`은 시도 기록을 안전하게 읽거나 쓸 수 없는 상태입니다. 기록을 지우거나 확인 없이 다시 보내지 마세요. 재시작·같은 등록의 lease 교체도 보류를 유지하고, 등록·epoch 교체는 옛 시도를 은퇴시킵니다. `--codex-steer off`는 새 steer만 끕니다. 보호 범위와 모드 전환의 한계는 [Codex 실행 방식](#codex-실행-방식)을 보세요.
 
 실행기 없이 재시작한 idle 대화는 threadId가 담긴 첫 tools/call(예: `auth_status`) 전까지 복구 조회를 기다립니다. 진단의 `steer-recovery-ambiguous`는 같은 clientId의 내용을 검증하지 못한 보류입니다.
+
+<!-- xbroker-docs:upgrade -->
+## 연결된 채 업그레이드
+
+이번 릴리스의 권장 client는 0.18.0입니다. 파일 첨부에는 서버와 송신·수신 client 모두 0.18.0 이상이 필요합니다.
+
+`auth_status.update`는 연결한 서버가 알려 준 `recommendedClientVersion`보다 현재 `clientVersion`이 낮을 때만 표시됩니다. 서버 버전과 npm client 버전은 별개이며, 구서버가 권장값을 주지 않으면 안내를 표시하지 않습니다. 이 값은 인터넷의 latest가 아니라 서버 릴리스에서 게시 여부를 검증한 권장 버전입니다.
+
+전역 설치 사용자는 `npm install -g @xelexis/x-broker@<권장 버전>`으로 갱신하고 `x-broker --version`을 확인한 뒤 아래 방법으로 재시작하거나 재연결하세요. npx 사용자는 MCP 설정의 고정 버전을 권장 버전으로 바꾸고 `npx -y @xelexis/x-broker@<권장 버전> --version`으로 준비합니다. 전역 설치 갱신만으로 별도의 npx-pin은 바뀌지 않습니다. `--version`은 버전 확인이며 대화 연결 갱신이 아닙니다.
+
+- **Claude:** 설치 또는 설정 버전을 갱신한 뒤 해당 대화에서 `/mcp` → `x-broker` → `Reconnect`를 실행합니다. 도구 목록과 실제 `clientVersion`이 갱신됐는지 확인합니다.
+- **Codex:** 원래 host 방식과 플래그를 유지합니다. `-c`로 연 TUI는 내장 app-server, `-c` 없는 resume은 공유 daemon을 사용합니다. 원래 플래그 그대로 종료 후 다시 열고, exec 대화는 exec 방식으로 resume합니다. 공유 daemon 기반 TUI를 다시 여는 것만으로 MCP가 새로 실행된다고 보장하지 않습니다.
+- **Codex daemon reload:** `config/mcpServer/reload`는 격리 app-server에서 확인한 실험적 방법입니다. 공유 daemon에서는 다른 프로젝트를 포함한 모든 thread에 영향을 줄 수 있으므로 사용자가 영향 범위를 판단할 때만 선택합니다. x-broker와 PM은 이를 자동 실행하지 않습니다.
+- **Windows:** 0.17.3 이상 npm launcher는 검증된 전용 실행파일 사본을 사용하므로 세션을 유지한 채 `npm install -g`로 갱신할 수 있습니다. 이전 launcher에서 처음 갱신할 때는 실행 중인 asb-client를 종료해야 합니다. 캐시를 쓸 수 없어 원본 실행으로 fallback했다는 stderr 안내가 있으면 그 세션도 업그레이드 전에 종료하세요. 실행 중 client 버전은 MCP 재연결 때 바뀝니다.
+- **Kimi:** 업그레이드·재연결은 미측정입니다. 설치 또는 설정 버전을 갱신하고 Kimi를 재시작하세요.
+
+daemon `restart`·`update`는 같은 daemon의 모든 대화 작업을 끊을 수 있습니다. daemon steer는 재시작 뒤 기록·대기열로 확인하며 미확인 메시지와 뒤의 전달을 보류합니다. embedded·Windows 전환과 기존 hook·queue의 짧은 저장 창에는 중복 가능성이 남습니다. 프로젝트에 맞춰 daemon(즉시 전달·재시작 중복 보호)과 embedded(대화별 환경·도구 경계 전달)를 선택하고, 한 대화에서는 모드를 유지하세요.
+
+Codex는 도구 목록을 세션마다 고정하므로 새 client가 추가한 도구는 Codex 세션을 다시 열어야 보입니다. Claude는 `/mcp` Reconnect로 도구 목록을 다시 읽습니다.
+
+재연결 뒤 `auth_status.clientVersion`, 같은 등록 ID·이름, `get_session.automaticDeliveryReady`와 실제 메시지 수신 재개를 확인합니다. 업그레이드하려고 등록을 retire하거나 새로 attach하지 않습니다.
+<!-- /xbroker-docs:upgrade -->
 
 ## 버전 호환
 
@@ -413,18 +445,18 @@ Codex daemon은 ACK(`message.ack.v1`)와 hook이 활성일 때 `turn/steer`, emb
 | 서버 0.17.2 + 클라이언트 0.17.1 | 기존 연결·메시지와 서버의 프로젝트 기록 격리·관리 화면을 지원합니다. 새 도구 입력과 프로젝트 종료 안내·수신 프로세스 보호에는 클라이언트도 0.17.2가 필요합니다. |
 | 클라이언트 0.17.2 + 서버 0.17.1 | 기존 연결·메시지를 지원합니다. 프로젝트 종료 판단·수신 프로세스 보호는 지원하지 않습니다. `expectRegistrationId`는 `unsupported`, Kimi 연결은 `unsupported-server`로 거부합니다. |
 
-업데이트 순서는 **전체 인스턴스 데이터 백업 → 서버 0.17.3 → npm 클라이언트 0.17.3 → 각 대화 재연결**입니다.
+업데이트 순서는 **전체 인스턴스 데이터 백업 → 서버 0.18.0 → npm 클라이언트 0.18.0 → 각 대화 재연결**입니다.
 
 1. 서버를 중지하고 전체 인스턴스 데이터와 기존 클라이언트 상태를 백업합니다. 서버 메모리 대기열은 재시작 때 사라지므로 가능한 한 대기 메시지를 먼저 비웁니다.
-2. 같은 데이터 경로로 서버 0.17.3을 시작합니다. 0.17.2에서 추가 저장 형식 마이그레이션은 없으며, 이전 버전에서 올리는 경우에는 [업그레이드 안내](https://github.com/xelexis-dev/agent-session-broker-deploy/blob/main/UPGRADE_PATH.md)를 먼저 따르세요.
-3. MCP 설정의 npm 버전을 `@xelexis/x-broker@0.17.3`으로 바꾸고 `npx -y @xelexis/x-broker@0.17.3 --version`으로 준비합니다. Windows에서 구 launcher를 처음 교체할 때는 실행 중인 asb-client를 한 번 모두 종료하세요. 새 launcher라도 cache fallback 안내가 있으면 해당 연결을 종료한 뒤 설치합니다.
+2. 같은 데이터 경로로 서버 0.18.0을 시작합니다. HTTP 허용 OFF인 평문 연결은 localhost도 거부하므로 TLS proxy 신뢰 설정이나 명시적 HTTP 허용 정책을 먼저 준비하세요. 기존 저장 형식의 필수 이전은 없으며, 이전 버전에서 올리는 경우에는 [업그레이드 안내](https://github.com/xelexis-dev/agent-session-broker-deploy/blob/main/UPGRADE_PATH.md)를 먼저 따르세요.
+3. 전역 설치는 `npm install -g @xelexis/x-broker@0.18.0`으로 갱신합니다. npx 사용자는 MCP 설정의 고정 버전을 바꾸고 `npx -y @xelexis/x-broker@0.18.0 --version`으로 준비합니다. Windows에서 구 launcher를 처음 교체할 때는 실행 중인 asb-client를 한 번 모두 종료하세요. 새 launcher라도 cache fallback 안내가 있으면 해당 연결을 종료한 뒤 설치합니다.
 4. Claude는 `/mcp`에서 재연결합니다. Codex는 원래 실행 방식과 플래그로 세션을 다시 열어 도구 목록과 새 clientVersion을 확인합니다. 공유 daemon 재개만으로 MCP 교체를 단정하지 마세요. Kimi 업그레이드는 미측정입니다. 같은 등록 ID·이름·수신 준비와 peer 메시지 실제 수신을 확인하며 새 attach/retire로 등록을 바꾸지 않습니다.
 
 새 서버 도구와 메시지 ACK에는 서버와 클라이언트 모두 0.17.3이 필요합니다. 클라이언트는 내장 도구 목록을 사용하므로 구 client 재연결만으로 새 도구가 생기지 않습니다. ACK는 host 인계까지이며 모델 읽음 확인이 아닙니다. 구 client로 내릴 때 발급된 미확인 메시지가 있으면 고정 최대 10분 동안 재시도 가능한 `storage`로 보호하고 이후 legacy 전달을 허용합니다.
 
 롤백은 서버를 중지하고 **업그레이드 전 전체 데이터 백업과 이전 실행파일을 함께 복원**합니다. `control.db`만 되돌리지 마세요. 백업 이후 변경은 복원되지 않습니다. ACK 대기열은 메모리 전용이며 재시작·롤백으로 사라집니다. 0.17.2는 해결·무시 리포트를 닫힘으로 읽지만 구서버 쓰기는 확장 상태·메모·기록을 잃고 32KiB 초과 record의 상태 변경이 거부될 수 있습니다.
 
-daemon `restart`·`update`는 같은 daemon의 모든 대화 작업을 끊을 수 있습니다. daemon steer는 재시작 뒤 기록·대기열로 확인하며 미확인 메시지와 뒤의 전달을 보류합니다. embedded·Windows 전환과 기존 hook·queue의 짧은 저장 창에는 중복 가능성이 남습니다. 가능한 경우 daemon 모드를 사용하세요.
+daemon `restart`·`update`는 같은 daemon의 모든 대화 작업을 끊을 수 있습니다. daemon steer는 재시작 뒤 기록·대기열로 확인하며 미확인 메시지와 뒤의 전달을 보류합니다. embedded·Windows 전환과 기존 hook·queue의 짧은 저장 창에는 중복 가능성이 남습니다. 프로젝트에 맞춰 daemon(즉시 전달·재시작 중복 보호)과 embedded(대화별 환경·도구 경계 전달)를 선택하고, 한 대화에서는 모드를 유지하세요.
 
 서버 버전별로 지원하는 클라이언트 최소 버전을 관리합니다. `client-incompatible` 또는 `server-incompatible` 안내가 나오면 표시된 최소 버전을 확인하세요. 클라이언트는 MCP 설정의 npm 버전을 지원 버전으로 바꾼 뒤 Claude에서는 `/mcp`로 재연결하고 Codex에서는 앱을 다시 시작합니다. 서버가 너무 오래된 경우에는 서버도 지원 버전으로 업데이트해야 합니다. `auth_status`에서 클라이언트·서버 버전과 호환 여부를 확인할 수 있습니다.
 

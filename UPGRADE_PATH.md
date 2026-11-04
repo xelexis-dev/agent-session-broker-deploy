@@ -5,7 +5,20 @@
 새 릴리스의 GitHub Release는 서버 실행파일 4개만 제공합니다. Windows·macOS·Linux 클라이언트는 `npm view @xelexis/x-broker version`으로 게시된 버전을 확인하고 `npx -y @xelexis/x-broker@<버전> --version`으로 준비한 뒤 MCP를 재연결합니다. 기존 클라이언트 상태와 자격증명은 유지합니다. 서버만 바뀐 릴리스는 npm 게시를 생략할 수 있습니다. 0.14.0 이하의 기존 Release와 클라이언트 다운로드 이력은 유지되며 아래 버전별 실행파일 안내는 당시 배포 방식의 역사 기록입니다.
 
 
-이 안내는 **0.17.3까지**의 업데이트와 데이터 이전 경로를 다룹니다. 실행파일 교체 방법은 [설치 안내](https://github.com/xelexis-dev/agent-session-broker-deploy#readme), 버전별 파일과 변경 사항은 [공개 릴리스](https://github.com/xelexis-dev/agent-session-broker-deploy/releases)에서 확인하세요.
+이 안내는 **0.18.0까지**의 업데이트와 데이터 이전 경로를 다룹니다. 실행파일 교체 방법은 [설치 안내](https://github.com/xelexis-dev/agent-session-broker-deploy#readme), 버전별 파일과 변경 사항은 [공개 릴리스](https://github.com/xelexis-dev/agent-session-broker-deploy/releases)에서 확인하세요.
+
+## 0.17.3 → 0.18.0
+
+
+메시지 파일 첨부에는 서버와 송신·수신 클라이언트의 갱신이 모두 필요합니다. HTTP 정책과 백업을 먼저 준비하고 아래 순서로 갱신하세요.
+
+1. 현재 서버가 직접 HTTP인지 TLS proxy 뒤인지 먼저 확인합니다. HTTP 허용 OFF인 plaintext 연결은 localhost도 거부됩니다. TLS proxy는 `--trusted-proxy <proxy CIDR>`와 단일 원래 scheme의 `X-Forwarded-Proto` 덮어쓰기를 준비하세요. 직접 HTTP를 계속 쓸 경우 관리자 정책에서 HTTP 허용을 명시적으로 켜야 합니다. 모르는 proxy를 신뢰 목록에 넣지 마세요.
+2. 승인된 점검 시간에 미전달 메시지를 가능한 한 비우고, 서버를 중지한 상태에서 control·registration·bugreport·삭제 이력을 포함한 전체 인스턴스 데이터와 클라이언트 상태를 백업합니다. ACK 대기열은 메모리 전용입니다.
+3. 서버 0.18.0를 같은 데이터 경로로 교체합니다. 새 필수 저장 형식 마이그레이션은 없습니다. LastSeen이 30일 이상이고 응답 기한이 지난 등록은 분리될 수 있습니다. 일시 중지는 제외되며 이름·자격 정리는 검증된 기존 정책에 따릅니다.
+4. 0.18.0 npm 게시가 검증된 뒤 클라이언트를 `@xelexis/x-broker@0.18.0`로 갱신합니다. Claude는 `/mcp`에서 재연결하고 Codex는 원래 방식·플래그로 세션을 다시 여세요. 공유 daemon 재개만으로 새 MCP 실행을 단정하지 마세요. Windows launcher의 기존 설치 원본 fallback 안내가 있었다면 해당 client를 종료한 뒤 갱신합니다.
+5. `auth_status`의 clientVersion/serverVersion, 기존 이름·등록 ID와 실제 peer 메시지 수신을 확인합니다. server/client 최소 호환 버전은 0.12.0으로 유지되지만 새 client 수정에는 새 실행 파일이 필요합니다. 롤백은 서버를 중지하고 업그레이드 전 전체 백업과 이전 실행 파일을 함께 복원합니다. 백업 뒤 변경과 메모리 대기열은 복원되지 않습니다.
+
+파일 첨부를 사용하려면 서버와 송신·수신 클라이언트가 모두 0.18.0 이상인지 확인한 뒤 관리자 스위치(기본 OFF)를 켭니다. 기존 메시지는 첨부를 켜지 않아도 사용할 수 있습니다. 서버의 `attachments-v1`은 기한 있는 임시 데이터이며 재시작하면 지워집니다. 완료된 받은 파일함은 사용자 캐시에 남고 자동 삭제되지 않으므로 별도로 정리하세요. 파일의 한도·자격증명 거부·디스크 보호·Windows junction 제한은 [변경 사항](https://github.com/xelexis-dev/agent-session-broker-deploy/releases/tag/0.18.0)의 메시지 파일 첨부 안내를 확인하세요.
 
 ## 0.17.2 → 0.17.3
 
@@ -20,7 +33,7 @@
 
 진단 v2는 별도 파일에 기록하고 v1은 읽기만 합니다. 0.17.2로 내리면 v2 진단은 보이지 않으며 재업그레이드하면 함께 조회합니다. 전체 백업에는 삭제 이력 `deletions.db`도 포함하세요. 이미 회수한 자격과 삭제한 리포트는 구버전 실행만으로 복원되지 않습니다. 구서버가 등록을 다시 저장하면 재승인 capability가 없어질 수 있으므로 재업그레이드 후 새 holder의 광고 전까지 자동 회수 대상에서 제외됩니다.
 
-가능하면 Codex daemon 모드를 사용하세요. 새 launcher는 daemon/embedded 재개를 첫 프롬프트 없이 연결할 수 있지만 실행 중 MCP의 버전은 별도로 확인해야 합니다. daemon restart/update는 다른 대화도 끊습니다. steer는 본문 없는 시도 기록을 먼저 남기고 재시작 뒤 대화 기록·대기열로 확인하며, 미확인 메시지와 뒤의 전달은 보류합니다. embedded·Windows 전환과 기존 hook·queue의 짧은 저장 창에는 중복 가능성이 남습니다. Windows에는 steer가 없습니다. 제한 계정의 Windows 검사에서 확인된 제품 결함은 0건이며 테스트·환경 보완 뒤 최종 재검사는 대기 중입니다. Linux/macOS amd64 실기 검증은 별도입니다.
+프로젝트에 맞춰 daemon(즉시 전달·재시작 중복 보호)과 embedded(대화별 환경·도구 경계 전달)를 선택하고, 한 대화에서는 모드를 유지하세요. 새 launcher는 daemon/embedded 재개를 첫 프롬프트 없이 연결할 수 있지만 실행 중 MCP의 버전은 별도로 확인해야 합니다. daemon restart/update는 다른 대화도 끊습니다. steer는 본문 없는 시도 기록을 먼저 남기고 재시작 뒤 대화 기록·대기열로 확인하며, 미확인 메시지와 뒤의 전달은 보류합니다. embedded·Windows 전환과 기존 hook·queue의 짧은 저장 창에는 중복 가능성이 남습니다. Windows에는 steer가 없습니다. 제한 계정의 Windows 검사에서 확인된 제품 결함은 0건이며 테스트·환경 보완 뒤 최종 재검사는 대기 중입니다. Linux/macOS amd64 실기 검증은 별도입니다.
 
 ## 0.17.1 → 0.17.2
 
