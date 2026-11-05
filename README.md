@@ -35,13 +35,13 @@ Node.js 18 이상과 npm이 필요합니다. Windows x64, macOS ARM64·x64, Linu
 
 ```sh
 npm view @xelexis/x-broker version
-npm install -g @xelexis/x-broker@0.18.0
+npm install -g @xelexis/x-broker@0.18.1
 x-broker --version
 ```
 
-예제는 `0.18.0`을 고정합니다. 서버만 바뀐 릴리스는 npm 게시를 생략하므로 서버와 클라이언트 버전이 다를 수 있습니다. 다른 버전은 게시 여부를 확인하고 설치 버전을 바꾸세요. `--version`은 버전 확인이며 대화 연결 검사가 아닙니다.
+예제는 `0.18.1`을 고정합니다. 서버만 바뀐 릴리스는 npm 게시를 생략하므로 서버와 클라이언트 버전이 다를 수 있습니다. 다른 버전은 게시 여부를 확인하고 설치 버전을 바꾸세요. `--version`은 버전 확인이며 대화 연결 검사가 아닙니다.
 
-대안으로 `npx -y @xelexis/x-broker@0.18.0`을 쓸 수 있지만 세션마다 약 100 MB의 npm 프로세스 하나가 계속 남습니다. 이때 아래 `command`를 `npx`로 바꾸고 `args` 앞에 `"-y", "@xelexis/x-broker@0.18.0"`을 추가하세요. `@latest`는 시작 때 레지스트리 확인과 다운로드로 늦어질 수 있으므로 버전을 고정하세요.
+대안으로 `npx -y @xelexis/x-broker@0.18.1`을 쓸 수 있지만 세션마다 약 100 MB의 npm 프로세스 하나가 계속 남습니다. 이때 아래 `command`를 `npx`로 바꾸고 `args` 앞에 `"-y", "@xelexis/x-broker@0.18.1"`을 추가하세요. `@latest`는 시작 때 레지스트리 확인과 다운로드로 늦어질 수 있으므로 버전을 고정하세요.
 
 macOS·Linux에서는 execve를 지원하는 Node의 전역 wrapper가 client로 교체됩니다. **Windows는 execve가 없어 어느 설치 방식이든 node relay가 남으며, 전역 설치는 npm exec 부모 프로세스를 제거합니다.**
 
@@ -79,6 +79,7 @@ args = [
 ```
 
 Codex는 신뢰한 프로젝트의 설정만 읽습니다. 같은 OS 사용자와 인증 상태 디렉터리를 유지하세요. MCP 재연결 후 에이전트에게 이 대화를 연결해 달라고 요청할 때만 `attach_session`을 호출합니다. 기존 등록은 자동 복구합니다. `auth_status`로 등록 이름·clientVersion·serverVersion을 확인하세요. 승인 코드가 나오면 관리 화면에서 승인합니다. 상세 재연결은 `xbroker_docs topic=upgrade`, 연결 오류는 `topic=errors`를 읽으세요.
+프로젝트마다 entry를 추가하는 방법은 [여러 프로젝트에 연결하기](#여러-프로젝트에-연결하기)를 보세요. 사용자 지정 `CODEX_HOME`은 각 MCP entry의 `env`에도 같은 경로로 지정합니다.
 <!-- /xbroker-docs:setup -->
 
 대화별 클라이언트 상태와 steer 시도 기록은 30일 동안 사용하지 않으면 자동 삭제하며(불확실한 pending 시도는 재연결로 해소될 때까지 보존), 진단 기록은 14일 후 정리합니다.
@@ -91,7 +92,7 @@ Codex는 신뢰한 프로젝트의 설정을 읽습니다. 기존 실행파일 �
 
 ### Codex 재개 실행기 (프롬프트 없는 연결)
 
-macOS·Linux에서 정확한 UUID를 지정한 재개 실행기는 daemon과 embedded 두 모드를 지원합니다. 아래를 `codex-resume.sh`로 저장하고 `sh codex-resume.sh <대화 UUID>`로 실행하세요. `-c model_reasoning_effort=medium` 같은 embedded 옵션을 주면 기존 PID claim 경로를 사용합니다. MCP 설정과 같은 npm client 버전이 필요합니다. 기본 `XB_VERSION=0.18.0`을 실제 MCP 고정 버전에 맞추세요. `--auth-dir`을 따로 썼다면 같은 절대 경로를 `AGENT_SESSION_BROKER_STATE_DIR`로 지정합니다. 사용자·프로젝트 설정은 바꾸지 않습니다.
+macOS·Linux에서 정확한 UUID를 지정한 재개 실행기는 daemon과 embedded 두 모드를 지원합니다. 아래를 `codex-resume.sh`로 저장하고 `sh codex-resume.sh <대화 UUID>`로 실행하세요. `-c model_reasoning_effort=medium` 같은 embedded 옵션을 주면 기존 PID claim 경로를 사용합니다. MCP 설정과 같은 npm client 버전이 필요합니다. 기본 `XB_VERSION=0.18.1`을 실제 MCP 고정 버전에 맞추세요. `--auth-dir`을 따로 썼다면 같은 절대 경로를 `AGENT_SESSION_BROKER_STATE_DIR`로 지정합니다. 사용자·프로젝트 설정은 바꾸지 않습니다.
 
 - embedded 옵션(`-c`·`--config`·`--enable`·`--disable`·`--search`·`--no-daemon`·`--dangerously-bypass-hook-trust`)과 명시 `--remote`는 함께 쓸 수 없습니다. 직접 `codex resume <UUID> ...`를 실행하면 기존 첫 프롬프트 경로를 쓸 수 있습니다.
 - `--remote`는 하나만 허용합니다. 기본 daemon은 CODEX_HOME의 socket 별칭을 TUI에 넘기고 helper는 정규 대상의 inode·peer를 검증합니다. 직접 지정한 endpoint는 그대로 쓰며, ws/wss endpoint는 helper 없이 전달합니다. `--last`·`--all`·`--include-non-interactive`는 거절하며 `--` 뒤는 그대로 넘깁니다.
@@ -193,7 +194,7 @@ until canonical_socket; do
 done
 helper_socket=$socket
 case "$helper_socket" in /*) ;; *) helper_socket="$PWD/$helper_socket" ;; esac
-npx -y "@xelexis/x-broker@${XB_VERSION:-0.18.0}" codex-resume-helper \
+npx -y "@xelexis/x-broker@${XB_VERSION:-0.18.1}" codex-resume-helper \
     --thread "$t" --pid "$$" --codex-home "$home" --socket "$helper_socket" --inode "$inode" \
     </dev/null >/dev/null 2>&1 &
 # Rotate the original positional arguments; never join or eval caller input.
@@ -252,7 +253,7 @@ Kimi는 프로젝트 루트의 `.mcp.json`을 읽습니다. 위 Claude 예제와
 
 Kimi 홈 `~/.kimi-code/config.toml`(또는 `$KIMI_CODE_HOME/config.toml`)에 아래 hook을 설정하세요. 자동으로 전역 설정을 바꾸지 않습니다. hook 명령에 broker 토큰을 넣지 마세요.
 
-MCP 설정과 같은 고정 버전을 `npm install -g @xelexis/x-broker@0.18.0`로 설치하고, `command -v x-broker`가 출력한 절대 경로를 아래 hook 명령에 사용하세요. hook의 `PATH`에서 `node`를 찾을 수 있어야 하며, 업그레이드할 때도 전역 설치 버전을 MCP 설정과 같게 유지하세요.
+MCP 설정과 같은 고정 버전을 `npm install -g @xelexis/x-broker@0.18.1`로 설치하고, `command -v x-broker`가 출력한 절대 경로를 아래 hook 명령에 사용하세요. hook의 `PATH`에서 `node`를 찾을 수 있어야 하며, 업그레이드할 때도 전역 설치 버전을 MCP 설정과 같게 유지하세요.
 
 ```toml
 [[hooks]]
@@ -276,6 +277,137 @@ MCP client의 `--auth-dir`/`--state-dir`와 hook의 경로를 같게 지정하�
 메시지는 **다음 eligible UserPromptSubmit 또는 Stop hook**에서 전달합니다. idle·실패·이미 Stop으로 이어진 턴은 다음 사용자 입력까지 기다릴 수 있습니다. idle 대화를 깨우지 않습니다. `auth_status`의 `delivery: "turn-boundary"`와 `pendingMessages`를 확인하세요. 공개 세션 목록의 `automaticDeliveryReady: false`는 이 제한을 뜻하며, 큐 접수를 막지 않습니다. 활동은 `unknown / unsupported`입니다.
 
 Kimi 2.3.1은 한 턴의 Stop continuation을 한 번만 실행합니다. 그 뒤 도착한 메시지는 다음 사용자 입력까지 남습니다. client가 batch를 hook으로 넘긴 뒤 Esc·timeout 등으로 hook이 중단되면 그 batch가 유실될 수 있으며, `kimi-hook-handoff` 진단은 handoff만 기록하고 모델 수신을 증명하지 않습니다. 대화가 바뀌면 기존 수신을 차단하고 `reconnect-required`를 표시합니다. 새 대화로 MCP를 재연결한 뒤 명시적으로 연결을 요청하세요.
+
+### 여러 프로젝트에 연결하기
+
+한 대화에서 프로젝트마다 MCP entry를 하나씩 추가합니다. entry 이름, broker URL의 `?project=`와 토큰을 각각 구분하고, 사용할 프로젝트의 entry에서 `attach_session`·`auth_status`·`send_message`를 호출하세요. 등록 이름과 권한은 프로젝트마다 따로 확인합니다.
+
+프로젝트별 토큰은 해당 프로젝트의 entry에만 넣으세요. 토큰을 포함한 설정을 Git·공유 폴더·메시지·진단 로그에 올리지 말고, 아래 예제의 토큰 자리만 로컬에서 바꾸세요. 서버는 교차 프로젝트 전송을 거부합니다. 다만 **같은 대화의 모델 context에는 여러 프로젝트의 정보가 함께 들어가며, 모델이 그 정보를 다른 프로젝트에 다시 보낼 수 있습니다.** 서로 정보를 공유하면 안 되는 프로젝트는 대화를 나누세요.
+
+고정 버전 전역 설치(`npm install -g @xelexis/x-broker@0.18.1`)를 권장합니다. entry마다 client 프로세스가 하나씩 생기며, npx는 npm 부모도 남깁니다. 다음은 macOS ARM64, Node 24.21.0/npm 11.19.0, client 0.18.0의 RSS 합계입니다. 3초 안정화 후 10표본의 중앙값이며 하네스·모델·서버 메모리는 제외했습니다.
+
+| 실행/상태 | entry 1개 | entry 2개 | 남은 프로세스 수 1개→2개 |
+| --- | ---: | ---: | --- |
+| 전역 / 초기화 전 | 18.62 MiB | 37.05 MiB | 1→2 |
+| 전역 / 등록 후 | 20.05 MiB | 39.17 MiB | 1→2 |
+| 전역 / 수신 후 | 20.45 MiB | 39.22 MiB | 1→2 |
+| npx / 초기화 전 | 120.41 MiB | 237.08 MiB | 2→4 |
+| npx / 등록 후 | 72.47 MiB | 197.86 MiB | 2→4 |
+| npx / 수신 후 | 72.88 MiB | 197.89 MiB | 2→4 |
+
+RSS는 공유 페이지를 중복 계상하며 시작 시점·GC·플랫폼에 따라 달라집니다. npx 부모만 약 52–102 MiB/entry로 관측돼 고정 100 MB는 아닙니다. 수신 후 표본을 10대화×2프로젝트로 선형 확대하면 전역 약 392 MiB, npx 약 1,979 MiB입니다. 실제 10대화 부하 시험이나 고유 물리 메모리 측정은 아닙니다. Windows는 전역 설치도 node relay가 남습니다.
+
+**Claude Code·Kimi — `.mcp.json`**
+
+다음은 Kimi에도 사용할 수 있도록 상태 디렉터리를 나눈 예제입니다. Claude는 동일 상태 디렉터리를 공유해도 프로젝트별 등록이 분리됩니다. 경로는 사용자 소유의 서로 다른 절대 경로로 바꾸세요.
+
+```json
+{
+  "mcpServers": {
+    "x-broker-p1": {
+      "command": "x-broker",
+      "args": ["--broker-url", "https://broker.example/mcp?project=p1", "--token", "프로젝트_P1_토큰", "--state-dir", "/absolute/path/client-state-p1"]
+    },
+    "x-broker-p2": {
+      "command": "x-broker",
+      "args": ["--broker-url", "https://broker.example/mcp?project=p2", "--token", "프로젝트_P2_토큰", "--state-dir", "/absolute/path/client-state-p2"]
+    }
+  }
+}
+```
+
+**Codex — `.codex/config.toml`**
+
+```toml
+[mcp_servers.x-broker-p1]
+command = "x-broker"
+args = ["--broker-url", "https://broker.example/mcp?project=p1", "--token", "프로젝트_P1_토큰"]
+
+[mcp_servers.x-broker-p2]
+command = "x-broker"
+args = ["--broker-url", "https://broker.example/mcp?project=p2", "--token", "프로젝트_P2_토큰"]
+```
+
+Codex의 다섯 수명 주기 hook에는 **각 entry의 handler를 모두** 넣으세요. 한 entry의 hook은 다른 entry의 pending 메시지를 비우지 않습니다. 아래 `.codex/hooks.json`은 client 0.17.2 이상용이며, hook 정의는 Codex에서 검토·신뢰한 뒤 사용하세요.
+
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [{"hooks": [
+      {"type": "mcp_tool", "server": "x-broker-p1", "tool": "ingress_hook", "input": {"session_id": "${session_id}", "hook_event_name": "${hook_event_name}", "turn_id": "${turn_id}"}, "timeout": 10},
+      {"type": "mcp_tool", "server": "x-broker-p2", "tool": "ingress_hook", "input": {"session_id": "${session_id}", "hook_event_name": "${hook_event_name}", "turn_id": "${turn_id}"}, "timeout": 10}
+    ]}],
+    "PreToolUse": [{"matcher": "*", "hooks": [
+      {"type": "mcp_tool", "server": "x-broker-p1", "tool": "ingress_hook", "input": {"session_id": "${session_id}", "hook_event_name": "${hook_event_name}", "turn_id": "${turn_id}"}, "timeout": 10},
+      {"type": "mcp_tool", "server": "x-broker-p2", "tool": "ingress_hook", "input": {"session_id": "${session_id}", "hook_event_name": "${hook_event_name}", "turn_id": "${turn_id}"}, "timeout": 10}
+    ]}],
+    "PostToolUse": [{"matcher": "*", "hooks": [
+      {"type": "mcp_tool", "server": "x-broker-p1", "tool": "ingress_hook", "input": {"session_id": "${session_id}", "hook_event_name": "${hook_event_name}", "turn_id": "${turn_id}"}, "timeout": 10},
+      {"type": "mcp_tool", "server": "x-broker-p2", "tool": "ingress_hook", "input": {"session_id": "${session_id}", "hook_event_name": "${hook_event_name}", "turn_id": "${turn_id}"}, "timeout": 10}
+    ]}],
+    "Stop": [{"hooks": [
+      {"type": "mcp_tool", "server": "x-broker-p1", "tool": "ingress_hook", "input": {"session_id": "${session_id}", "hook_event_name": "${hook_event_name}", "turn_id": "${turn_id}"}, "timeout": 10},
+      {"type": "mcp_tool", "server": "x-broker-p2", "tool": "ingress_hook", "input": {"session_id": "${session_id}", "hook_event_name": "${hook_event_name}", "turn_id": "${turn_id}"}, "timeout": 10}
+    ]}],
+    "Interrupt": [{"hooks": [
+      {"type": "mcp_tool", "server": "x-broker-p1", "tool": "ingress_hook", "input": {"session_id": "${session_id}", "hook_event_name": "${hook_event_name}"}, "timeout": 10},
+      {"type": "mcp_tool", "server": "x-broker-p2", "tool": "ingress_hook", "input": {"session_id": "${session_id}", "hook_event_name": "${hook_event_name}"}, "timeout": 10}
+    ]}]
+  }
+}
+```
+
+macOS의 Codex 0.164.0 embedded에서 1 entry, 2 entries, 1 entry+단순 MCP, 2 entries/hook 없음, 2 entries/entry별 hook의 실제 입력·등록·`auth_status`를 확인했습니다. 두 entry 때문에 시작이 멈추는 현상은 재현되지 않았습니다. 이 시험은 전체 메시지 경로의 장기 신뢰성이나 최소 Codex 버전을 정하지 않습니다.
+
+사용자 지정 `CODEX_HOME`을 쓰면 **각 MCP 자식에도 같은 절대 경로를 명시**하세요. CLI의 환경변수가 자식에게 자동 전달된다고 가정하면 `codex session not found`가 발생할 수 있습니다. 위 두 MCP 설정에 다음을 덧붙입니다. 기본 홈을 쓴다면 이 추가 설정은 필요하지 않습니다.
+
+```toml
+[mcp_servers.x-broker-p1.env]
+CODEX_HOME = "/absolute/path/codex-home"
+
+[mcp_servers.x-broker-p2.env]
+CODEX_HOME = "/absolute/path/codex-home"
+```
+
+자동화한 PTY에서는 안쪽 터미널의 행·열 크기와 raw 입력을 설정하세요. 시험 중 Expect의 안쪽 PTY가 0×0이어서 화면 키워드를 놓쳤고, 바깥 PTY가 Enter의 CR을 LF로 바꿔 전송하지 못했습니다. 이 하네스 설정을 고친 0.164.0에서 다섯 변형이 모두 통과했으며, 이 결과로 Codex 업그레이드가 필요하다고 판단하지는 않았습니다.
+
+**Kimi — entry별 상태 디렉터리와 helper**
+
+같은 Kimi 부모 PID와 상태 디렉터리를 공유하면 두 번째 hook 소켓이 충돌해 `kimi-hook-unavailable`이 됩니다. 위 `.mcp.json`처럼 상태 디렉터리를 나누고, Kimi의 `config.toml`에도 각 entry와 같은 경로의 helper를 설정하세요. 토큰은 helper 명령에 넣지 않습니다. 전역 설치된 `x-broker`의 절대 경로를 사용합니다.
+
+```toml
+[[hooks]]
+event = "SessionStart"
+command = '"/absolute/path/x-broker" kimi-hook --state-dir "/absolute/path/client-state-p1"'
+timeout = 5
+
+[[hooks]]
+event = "SessionStart"
+command = '"/absolute/path/x-broker" kimi-hook --state-dir "/absolute/path/client-state-p2"'
+timeout = 5
+
+[[hooks]]
+event = "UserPromptSubmit"
+command = '"/absolute/path/x-broker" kimi-hook --state-dir "/absolute/path/client-state-p1"'
+timeout = 5
+
+[[hooks]]
+event = "UserPromptSubmit"
+command = '"/absolute/path/x-broker" kimi-hook --state-dir "/absolute/path/client-state-p2"'
+timeout = 5
+
+[[hooks]]
+event = "Stop"
+command = '"/absolute/path/x-broker" kimi-hook --state-dir "/absolute/path/client-state-p1"'
+timeout = 5
+
+[[hooks]]
+event = "Stop"
+command = '"/absolute/path/x-broker" kimi-hook --state-dir "/absolute/path/client-state-p2"'
+timeout = 5
+```
+
+Kimi 수신은 다음 eligible UserPromptSubmit/Stop 경계에서 이루어지며 idle 대화를 깨우지 않습니다. **Kimi는 첨부를 받을 수 없습니다.** 첨부를 지원하는 Claude·Codex 수신자에게 보내는 것은 가능합니다.
 
 ## 4. 연결 확인
 
@@ -417,7 +549,7 @@ message.ack.v1을 협상한 durable 등록은 살아 있는 서버에서 at-leas
 <!-- xbroker-docs:upgrade -->
 ## 연결된 채 업그레이드
 
-이번 릴리스의 권장 client는 0.18.0입니다. 파일 첨부에는 서버와 송신·수신 client 모두 0.18.0 이상이 필요합니다.
+이번 릴리스의 권장 client는 0.18.1입니다. 0.18.1은 문서 업데이트이므로 기존 0.18.0 client의 갱신은 선택 사항입니다. 파일 첨부에는 서버와 송신·수신 client 모두 0.18.0 이상이 필요합니다.
 
 `auth_status.update`는 연결한 서버가 알려 준 `recommendedClientVersion`보다 현재 `clientVersion`이 낮을 때만 표시됩니다. 서버 버전과 npm client 버전은 별개이며, 구서버가 권장값을 주지 않으면 안내를 표시하지 않습니다. 이 값은 인터넷의 latest가 아니라 서버 릴리스에서 게시 여부를 검증한 권장 버전입니다.
 
@@ -445,11 +577,11 @@ Codex는 도구 목록을 세션마다 고정하므로 새 client가 추가한 �
 | 서버 0.17.2 + 클라이언트 0.17.1 | 기존 연결·메시지와 서버의 프로젝트 기록 격리·관리 화면을 지원합니다. 새 도구 입력과 프로젝트 종료 안내·수신 프로세스 보호에는 클라이언트도 0.17.2가 필요합니다. |
 | 클라이언트 0.17.2 + 서버 0.17.1 | 기존 연결·메시지를 지원합니다. 프로젝트 종료 판단·수신 프로세스 보호는 지원하지 않습니다. `expectRegistrationId`는 `unsupported`, Kimi 연결은 `unsupported-server`로 거부합니다. |
 
-업데이트 순서는 **전체 인스턴스 데이터 백업 → 서버 0.18.0 → npm 클라이언트 0.18.0 → 각 대화 재연결**입니다.
+업데이트 순서는 **전체 인스턴스 데이터 백업 → 서버 0.18.1 → npm 클라이언트 0.18.1(0.18.0 사용자는 선택 사항) → 각 대화 재연결**입니다.
 
 1. 서버를 중지하고 전체 인스턴스 데이터와 기존 클라이언트 상태를 백업합니다. 서버 메모리 대기열은 재시작 때 사라지므로 가능한 한 대기 메시지를 먼저 비웁니다.
-2. 같은 데이터 경로로 서버 0.18.0을 시작합니다. HTTP 허용 OFF인 평문 연결은 localhost도 거부하므로 TLS proxy 신뢰 설정이나 명시적 HTTP 허용 정책을 먼저 준비하세요. 기존 저장 형식의 필수 이전은 없으며, 이전 버전에서 올리는 경우에는 [업그레이드 안내](https://github.com/xelexis-dev/agent-session-broker-deploy/blob/main/UPGRADE_PATH.md)를 먼저 따르세요.
-3. 전역 설치는 `npm install -g @xelexis/x-broker@0.18.0`으로 갱신합니다. npx 사용자는 MCP 설정의 고정 버전을 바꾸고 `npx -y @xelexis/x-broker@0.18.0 --version`으로 준비합니다. Windows에서 구 launcher를 처음 교체할 때는 실행 중인 asb-client를 한 번 모두 종료하세요. 새 launcher라도 cache fallback 안내가 있으면 해당 연결을 종료한 뒤 설치합니다.
+2. 같은 데이터 경로로 서버 0.18.1을 시작합니다. HTTP 허용 OFF인 평문 연결은 localhost도 거부하므로 TLS proxy 신뢰 설정이나 명시적 HTTP 허용 정책을 먼저 준비하세요. 기존 저장 형식의 필수 이전은 없으며, 이전 버전에서 올리는 경우에는 [업그레이드 안내](https://github.com/xelexis-dev/agent-session-broker-deploy/blob/main/UPGRADE_PATH.md)를 먼저 따르세요.
+3. 전역 설치는 `npm install -g @xelexis/x-broker@0.18.1`으로 갱신합니다. npx 사용자는 MCP 설정의 고정 버전을 바꾸고 `npx -y @xelexis/x-broker@0.18.1 --version`으로 준비합니다. Windows에서 구 launcher를 처음 교체할 때는 실행 중인 asb-client를 한 번 모두 종료하세요. 새 launcher라도 cache fallback 안내가 있으면 해당 연결을 종료한 뒤 설치합니다.
 4. Claude는 `/mcp`에서 재연결합니다. Codex는 원래 실행 방식과 플래그로 세션을 다시 열어 도구 목록과 새 clientVersion을 확인합니다. 공유 daemon 재개만으로 MCP 교체를 단정하지 마세요. Kimi 업그레이드는 미측정입니다. 같은 등록 ID·이름·수신 준비와 peer 메시지 실제 수신을 확인하며 새 attach/retire로 등록을 바꾸지 않습니다.
 
 새 서버 도구와 메시지 ACK에는 서버와 클라이언트 모두 0.17.3이 필요합니다. 클라이언트는 내장 도구 목록을 사용하므로 구 client 재연결만으로 새 도구가 생기지 않습니다. ACK는 host 인계까지이며 모델 읽음 확인이 아닙니다. 구 client로 내릴 때 발급된 미확인 메시지가 있으면 고정 최대 10분 동안 재시도 가능한 `storage`로 보호하고 이후 legacy 전달을 허용합니다.
