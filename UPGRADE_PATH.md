@@ -5,7 +5,17 @@
 새 릴리스의 GitHub Release는 서버 실행파일 4개만 제공합니다. Windows·macOS·Linux 클라이언트는 `npm view @xelexis/x-broker version`으로 게시된 버전을 확인하고 `npx -y @xelexis/x-broker@<버전> --version`으로 준비한 뒤 MCP를 재연결합니다. 기존 클라이언트 상태와 자격증명은 유지합니다. 서버만 바뀐 릴리스는 npm 게시를 생략할 수 있습니다. 0.14.0 이하의 기존 Release와 클라이언트 다운로드 이력은 유지되며 아래 버전별 실행파일 안내는 당시 배포 방식의 역사 기록입니다.
 
 
-이 안내는 **0.18.0까지**의 업데이트와 데이터 이전 경로를 다룹니다. 실행파일 교체 방법은 [설치 안내](https://github.com/xelexis-dev/agent-session-broker-deploy#readme), 버전별 파일과 변경 사항은 [공개 릴리스](https://github.com/xelexis-dev/agent-session-broker-deploy/releases)에서 확인하세요.
+이 안내는 **0.19.0까지**의 업데이트와 데이터 이전 경로를 다룹니다. 실행파일 교체 방법은 [설치 안내](https://github.com/xelexis-dev/agent-session-broker-deploy#readme), 버전별 파일과 변경 사항은 [공개 릴리스](https://github.com/xelexis-dev/agent-session-broker-deploy/releases)에서 확인하세요.
+
+## 0.18.1 → 0.19.0
+
+1. 승인된 점검 시간에 미전달 메시지를 가능한 한 비우고, 서버를 중지한 상태에서 control·registration·bugreport를 포함한 전체 인스턴스 데이터를 백업합니다. 메모리 대기열은 백업되지 않습니다.
+2. 서버 0.19.0을 같은 데이터 경로로 교체합니다. 관리 API는 기본 OFF이며 기존 MCP 사용에 API 토큰이 필요하지 않습니다. 제어판의 관리자 설정에서 필요한 경우에만 관리 API를 켜세요.
+3. HTTPS와 기존 trusted proxy 설정을 확인합니다. HTTP 연결 허용이 OFF이면 평문 API는 거부됩니다. 평문 허용은 비밀번호와 토큰 노출 위험을 감수하는 설정입니다.
+4. 관리 API 자동화는 별도 일반 사용자와 최소 프로젝트 멤버십·scope로 준비합니다. 내 프로필의 API 토큰 화면에서 현재 비밀번호로 자기 토큰을 발급하거나 로그인 API를 사용합니다. 관리자 write 토큰은 모든 프로젝트 Owner 권한이며, 기기 승인에는 별도 approve scope가 필요합니다. 원문을 로그·Git·명령 인자에 남기지 마세요.
+5. npm 게시를 확인한 뒤 필요한 클라이언트를 `@xelexis/x-broker@0.19.0`으로 직접 갱신하고 각 MCP를 재연결합니다. 관리 REST API는 서버 기능이므로 기존 MCP 사용자의 일괄 갱신은 필수가 아닙니다. 최소 서버·클라이언트 0.12.0과 legacy 허용은 유지합니다. auth_status의 버전·등록 ID와 실제 peer 수신을 확인하세요.
+
+롤백은 서버를 중지하고 전체 백업과 이전 실행 파일을 함께 복원합니다. 백업 뒤의 변경과 메모리 대기열은 복원되지 않습니다. 사용자 API 토큰은 0.18.x에서 잠자더라도 다시 업그레이드하면 살아 있을 수 있으므로, 유출 대응 시 다운그레이드 전에 취소하고 이미 내렸으면 해당 사용자 비밀번호를 변경하세요. 스위치 OFF만으로 토큰이 취소되지는 않습니다.
 
 ## 0.17.3 → 0.18.0
 
@@ -46,7 +56,7 @@
 
 클라이언트 0.17.2와 서버 0.17.1 조합에서는 프로젝트 종료 판단·수신 프로세스 보호를 사용할 수 없고, `expectRegistrationId`는 `unsupported`로 거부하며 기대값 없이 재전송하지 않습니다. Kimi는 서버와 클라이언트 모두 0.17.2 이상이 필요하며 이전 서버에서는 `unsupported-server`로 안내합니다.
 
-Codex hook의 `turn_id`는 **클라이언트를 0.17.2 이상으로 올린 뒤** 추가하세요. 0.17.1은 알 수 없는 키를 거절합니다. Kimi는 `SessionStart`·`UserPromptSubmit`·`Stop`에 `kimi-hook`을 설정하고 MCP와 같은 상태 경로를 사용합니다. idle 대화를 깨우지 않으며 다음 프롬프트 또는 턴 종료 시 메시지를 받습니다. 설정 예시는 [README](https://github.com/xelexis-dev/agent-session-broker-deploy#readme)를 따르세요.
+Codex hook의 `turn_id`는 **클라이언트를 0.17.2 이상으로 올린 뒤** 추가하세요. 0.17.1은 알 수 없는 키를 거절합니다. Kimi는 `SessionStart`·`UserPromptSubmit`·`Stop`에 `kimi-hook`을 설정하고 MCP와 같은 상태 경로를 사용합니다. idle 대화를 깨우지 않으며 다음 프롬프트 또는 턴 종료 시 메시지를 받습니다. 설정 예시는 [README_AGENT.md](https://github.com/xelexis-dev/agent-session-broker-deploy/blob/main/README_AGENT.md)를 따르세요.
 
 버전 사이의 데이터 쓰기 호환은 보장하지 않습니다. 롤백은 서버를 중지하고 **업그레이드 전 전체 데이터 백업과 이전 실행파일을 함께 복원**합니다. `control.db`만 되돌리지 마세요. 백업 이후 변경은 전체 복원에 포함되지 않습니다. 서버 재시작 전 미전달 메시지는 보존되지 않으며 실패한 메시지를 자동으로 다시 보내지 않습니다.
 
@@ -197,7 +207,7 @@ Codex hook의 `turn_id`는 **클라이언트를 0.17.2 이상으로 올린 뒤**
 
 필수 중간 버전이나 DB 이전은 없습니다. 기존 서버 데이터와 클라이언트 등록 상태 디렉터리를 유지합니다.
 
-**인증 클라이언트의 설정 변경이 필요합니다.** `--token-file` 옵션은 더 이상 지원하지 않습니다. MCP 설정에서 이 옵션과 파일 경로를 제거하고 `--token` 다음에 기존 파일 안의 토큰 값 자체를 입력한 뒤 연결을 다시 시작합니다. 기존 토큰이 여전히 유효하면 새로 발급할 필요는 없습니다. 무인증 연결은 `--token` 없이 그대로 사용합니다. 예제와 설정 보관 방법은 [README](https://github.com/xelexis-dev/agent-session-broker-deploy#readme)를 따르세요.
+**인증 클라이언트의 설정 변경이 필요합니다.** `--token-file` 옵션은 더 이상 지원하지 않습니다. MCP 설정에서 이 옵션과 파일 경로를 제거하고 `--token` 다음에 기존 파일 안의 토큰 값 자체를 입력한 뒤 연결을 다시 시작합니다. 기존 토큰이 여전히 유효하면 새로 발급할 필요는 없습니다. 무인증 연결은 `--token` 없이 그대로 사용합니다. 예제와 설정 보관 방법은 [README_AGENT.md](https://github.com/xelexis-dev/agent-session-broker-deploy/blob/main/README_AGENT.md)를 따르세요.
 
 서버·클라이언트를 0.3.2로 교체한 뒤 버전, 로그인, 프로젝트 목록과 실제 세션 답신을 확인합니다. 파일의 토큰은 자동으로 읽거나 삭제하지 않습니다.
 
