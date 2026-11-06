@@ -5,7 +5,13 @@
 새 릴리스의 GitHub Release는 서버 실행파일 4개만 제공합니다. Windows·macOS·Linux 클라이언트는 `npm view @xelexis/x-broker version`으로 게시된 버전을 확인하고 `npx -y @xelexis/x-broker@<버전> --version`으로 준비한 뒤 MCP를 재연결합니다. 기존 클라이언트 상태와 자격증명은 유지합니다. 서버만 바뀐 릴리스는 npm 게시를 생략할 수 있습니다. 0.14.0 이하의 기존 Release와 클라이언트 다운로드 이력은 유지되며 아래 버전별 실행파일 안내는 당시 배포 방식의 역사 기록입니다.
 
 
-이 안내는 **0.19.0까지**의 업데이트와 데이터 이전 경로를 다룹니다. 실행파일 교체 방법은 [설치 안내](https://github.com/xelexis-dev/agent-session-broker-deploy#readme), 버전별 파일과 변경 사항은 [공개 릴리스](https://github.com/xelexis-dev/agent-session-broker-deploy/releases)에서 확인하세요.
+이 안내는 **0.19.1까지**의 업데이트와 데이터 이전 경로를 다룹니다. 실행파일 교체 방법은 [설치 안내](https://github.com/xelexis-dev/agent-session-broker-deploy#readme), 버전별 파일과 변경 사항은 [공개 릴리스](https://github.com/xelexis-dev/agent-session-broker-deploy/releases)에서 확인하세요.
+
+## 0.19.0 → 0.19.1
+
+1. 전체 인스턴스 데이터를 백업한 뒤 같은 데이터 경로로 서버 0.19.1을 교체합니다. 필수 저장 형식 이전은 없으며, 제어판의 태블릿 사이드 메뉴 수정을 포함합니다.
+2. VS Code Claude 확장에서 broker 메시지를 보려면 npm 게시를 확인한 뒤 `npm install -g @xelexis/x-broker@0.19.1`로 직접 갱신하고 각 MCP를 다시 연결합니다. 새 메시지는 접힌 "Sender not recorded" peer 행에 발신자와 본문 앞부분을 표시합니다. 터미널 CLI와 다른 host의 전달 형식은 유지됩니다.
+3. 최소 서버·클라이언트 0.12.0과 legacy 허용은 유지합니다. 기존 메시지와 큰 메시지의 plain fallback은 VS Code에서 계속 숨겨질 수 있습니다.
 
 ## 0.18.1 → 0.19.0
 
