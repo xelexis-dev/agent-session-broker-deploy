@@ -11,7 +11,7 @@ Docker Compose를 사용할 수 있는 서버에 아래 내용을 `compose.yaml`
 ```yaml
 services:
   broker:
-    image: ghcr.io/xelexis-dev/agent-session-broker-deploy:0.19.1
+    image: ghcr.io/xelexis-dev/agent-session-broker-deploy:0.19.2
     restart: unless-stopped
     ports:
       - "8787:8787"
@@ -33,7 +33,7 @@ docker compose up -d
 
 ```sh
 npm view @xelexis/x-broker version
-npm install -g @xelexis/x-broker@0.19.1
+npm install -g @xelexis/x-broker@0.19.2
 x-broker --version
 ```
 

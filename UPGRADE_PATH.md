@@ -5,7 +5,13 @@
 새 릴리스의 GitHub Release는 서버 실행파일 4개만 제공합니다. Windows·macOS·Linux 클라이언트는 `npm view @xelexis/x-broker version`으로 게시된 버전을 확인하고 `npx -y @xelexis/x-broker@<버전> --version`으로 준비한 뒤 MCP를 재연결합니다. 기존 클라이언트 상태와 자격증명은 유지합니다. 서버만 바뀐 릴리스는 npm 게시를 생략할 수 있습니다. 0.14.0 이하의 기존 Release와 클라이언트 다운로드 이력은 유지되며 아래 버전별 실행파일 안내는 당시 배포 방식의 역사 기록입니다.
 
 
-이 안내는 **0.19.1까지**의 업데이트와 데이터 이전 경로를 다룹니다. 실행파일 교체 방법은 [설치 안내](https://github.com/xelexis-dev/agent-session-broker-deploy#readme), 버전별 파일과 변경 사항은 [공개 릴리스](https://github.com/xelexis-dev/agent-session-broker-deploy/releases)에서 확인하세요.
+이 안내는 **0.19.2까지**의 업데이트와 데이터 이전 경로를 다룹니다. 실행파일 교체 방법은 [설치 안내](https://github.com/xelexis-dev/agent-session-broker-deploy#readme), 버전별 파일과 변경 사항은 [공개 릴리스](https://github.com/xelexis-dev/agent-session-broker-deploy/releases)에서 확인하세요.
+
+## 0.19.1 → 0.19.2
+
+1. 전체 인스턴스 데이터를 백업하고 서버를 0.19.2로 교체합니다. 필수 저장 형식 이전이나 최소 호환 버전 변경은 없습니다.
+2. Windows에서 실행 중 Claude Code의 자동 업데이트 후 MCP 재연결이 실패했다면 `npm install -g @xelexis/x-broker@0.19.2`로 갱신하고 MCP를 다시 연결합니다. 업데이트 후 새로 시작한 세션은 영향이 없었습니다. 갱신 전에는 세션을 종료한 뒤 재개하면 우회할 수 있습니다.
+3. 부모 식별 실패 시 `auth_status.parentDiagnostic`에서 실패 단계·오류 번호·허용된 프로그램 이름을 확인합니다. 경로·인자·토큰은 표시하지 않습니다.
 
 ## 0.19.0 → 0.19.1
 
