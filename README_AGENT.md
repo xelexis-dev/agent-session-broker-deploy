@@ -18,11 +18,11 @@ Claude Code와 Codex 세션 사이의 메시지를 중계합니다. MCP 클라�
 | Windows | `.\asb-server.exe --memory-dir .\asb-data` |
 | macOS·Linux | `chmod +x asb-server` 실행 후 `./asb-server --memory-dir ./asb-data` |
 
-기본 주소는 `127.0.0.1:8787`입니다. **0.19.3은 최초 관리자 설정에 데이터 폴더의 일회용 설정 코드가 필요합니다.** 최초 설정 전에는 외부에 포트를 열지 마세요.
+기본 주소는 `127.0.0.1:8787`입니다. **0.20.1은 최초 관리자 설정에 데이터 폴더의 일회용 설정 코드가 필요합니다.** 최초 설정 전에는 외부에 포트를 열지 마세요.
 
 이 서버에서 `http://127.0.0.1:8787/setup`을 열고(원격이면 `ssh -L 8787:127.0.0.1:8787 <서버>`로 SSH 터널 연결) 아래에서 확인한 설정 코드와 새 관리자 비밀번호를 입력합니다. 로그인한 뒤 프로젝트를 만들고 접속을 허용합니다. **프로젝트 설정 → 프로젝트 토큰**에서 토큰을 발급합니다.
 
-**0.19.3의 설정 코드**: 설정 코드와 새 관리자 비밀번호를 함께 입력해야 합니다. 코드는 `asb-data/control/setup-code`(Windows `asb-data\control\setup-code`)에 있으며 `cat`·`Get-Content`로 확인합니다. Docker는 `docker compose exec broker cat /data/control/setup-code`를 사용합니다. 파일이 없거나 읽기 실패면 서버 시작 상태와 데이터 경로를 확인하고, 코드를 생략하지 마세요. 코드는 재시작 때 바뀌고 설정 성공 후 지워지며 로그에는 파일 위치만 나옵니다. 코드와 설정 전 백업은 비밀로 보관하세요. Windows에서는 데이터 폴더에 private ACL을 설정해야 합니다. 0600 파일 모드는 Windows의 owner-only ACL을 보장하지 않습니다.
+**0.20.1의 설정 코드**: 설정 코드와 새 관리자 비밀번호를 함께 입력해야 합니다. 코드는 `asb-data/control/setup-code`(Windows `asb-data\control\setup-code`)에 있으며 `cat`·`Get-Content`로 확인합니다. Docker는 `docker compose exec broker cat /data/control/setup-code`를 사용합니다. 파일이 없거나 읽기 실패면 서버 시작 상태와 데이터 경로를 확인하고, 코드를 생략하지 마세요. 코드는 재시작 때 바뀌고 설정 성공 후 지워지며 로그에는 파일 위치만 나옵니다. 코드와 설정 전 백업은 비밀로 보관하세요. Windows에서는 데이터 폴더에 private ACL을 설정해야 합니다. 0600 파일 모드는 Windows의 owner-only ACL을 보장하지 않습니다.
 
 클라이언트 연결에는 HTTPS를 사용하세요. **HTTP 연결 허용**이 꺼져 있으면 `/mcp`와 OAuth 자격증명 경로는 표시 헤더가 없는 평문 요청도 403으로 거부합니다. localhost도 예외가 아닙니다. TLS를 종료하는 proxy 뒤에서는 같은 호스트의 proxy라도 서버에 `--trusted-proxy <proxy CIDR>`를 지정하고, proxy가 외부 입력을 전달하지 않고 `X-Forwarded-Proto`를 단일 원래 scheme 값으로 **덮어써야** 합니다. 기본 신뢰 proxy는 없으며, 신뢰한 proxy의 값이 없거나 중복·목록·잘못된 값이면 HTTPS 증명으로 쓰지 않습니다. 보호된 내부망에서 HTTP를 사용하려면 **인스턴스 설정 → HTTP 연결 허용**을 켜세요. 다른 PC에서 HTTP로 직접 접속하는 것은 보호된 내부망에서 `--listen 0.0.0.0:8787`과 HTTP 연결 허용을 함께 켤 때만 사용합니다.
 
@@ -30,11 +30,39 @@ Claude Code와 Codex 세션 사이의 메시지를 중계합니다. MCP 클라�
 
 연결 요청 시 승인 없이 등록하는 토큰은 발급할 때 등록 한도와 수명을 선택합니다. 기본값은 8개·30일이며, 한도는 1~100000개 또는 **무제한**, 수명은 1~36500일 또는 **무기한**으로 지정할 수 있습니다(서버 0.17.0부터). 프로젝트 전체 등록 한도와 요청 제한은 그대로 적용됩니다. 무제한 또는 이전 범위(64개·90일)를 넘는 토큰을 발급한 뒤 서버를 0.16 이하로 내리려면 업그레이드 전 데이터 백업을 복원해야 합니다.
 
+### 인스턴스 한도와 운영
+
+| 항목 | 한도 |
+| --- | --- |
+| 프로젝트 | 인스턴스당 128개 |
+| 사용자 | 인스턴스당 512명 |
+| control 상태 | 직렬화한 상태 8 MiB (SQLite 파일 전체 크기 한도가 아님) |
+| 패널 로그인 세션 | 서버 프로세스당 동시에 128개 (모든 사용자 합계, 만료 세션을 정리한 뒤 적용) |
+
+**백업:** 대기 메시지를 먼저 비우고 서버를 완전히 중지한 뒤 `--memory-dir`로 지정한 데이터 폴더 전체를 백업합니다(Compose 기본 `/data`의 volume 또는 bind 원본). control·프로젝트별 registration·bugreport·memory와 그 밖의 데이터 파일을 함께 보존하고 파일 목록·크기·SHA-256을 기록합니다. 실행 중인 SQLite 파일 하나만 복사하지 마세요. 클라이언트 인증 상태도 별도로 보존하고, 자격증명이 포함될 수 있는 백업의 접근을 제한하세요. 메모리 메시지 대기열은 백업되지 않습니다.
+
+**복원:** 서버를 중지하고 기존 데이터와 섞이지 않는 **새 빈 폴더**에 전체 백업을 복원해 파일 목록·크기·해시를 대조합니다. 이전 서버 binary/image와 원래 권한·소유자를 사용해 시작합니다. 백업 이후의 변경은 사라지므로 **백업 뒤 취소한 토큰은 복원 후 다시 취소**해야 합니다. 각 프로젝트의 로그인·권한·같은 등록 ID·메모리를 확인하고 클라이언트를 재연결합니다. 제자리 다운그레이드는 지원하지 않습니다. 재시작하면 메시지 대기열과 서버 임시 첨부는 사라집니다.
+
+**상태와 로그:** 서버 호스트의 `http://127.0.0.1:8787/healthz`와 TLS proxy의 `https://broker.example.com/healthz`가 HTTP 200과 `ok`를 반환하는지 확인합니다. `/healthz`는 HTTP 프로세스 생존 확인이며 로그인·등록·메시지 실제 수신의 성공 증거는 아닙니다. 서버 기본 진단과 시작·오류 로그는 stderr, `--help`·`--version` 출력은 stdout으로 갑니다. 직접 실행은 터미널/실행 관리자의 stderr 수집 위치, Compose는 `docker compose logs broker`에서 확인합니다. 서버가 별도 로그 파일을 자동 생성하지는 않습니다. 로그를 공유할 때 토큰·쿠키·승인 코드와 비공개 경로를 제거하세요.
+
+**1.0 업그레이드 순서:** 모든 프로젝트의 PC별 버전을 확인하고 client를 먼저 최소 0.17.3 이상(배포 후보/정식 릴리스에 맞는 npm 버전)으로 갱신·재연결합니다. 꺼져 있던 PC도 포함합니다. 이어 서버 중지 → 전체 백업 → 서버 binary/image 교체 → 같은 데이터 경로로 시작 → 버전·동일 등록 ID·양방향 실제 메시지 수신을 확인합니다. 최소 버전 미만의 client는 사용할 수 없습니다. 현재 릴리스별 추가 절차는 [업그레이드 안내](https://github.com/xelexis-dev/agent-session-broker-deploy/blob/main/UPGRADE_PATH.md)를 따르세요.
+
+TLS를 종료하는 nginx의 HTTPS `server` 블록 안에 넣는 예입니다. 인증서와 HTTPS listen 설정은 해당 도메인에 맞게 준비하고, broker에는 이 proxy의 실제 주소만 `--trusted-proxy`로 신뢰하도록 지정하세요.
+
+```nginx
+add_header Strict-Transport-Security "max-age=31536000" always;
+location / {
+    proxy_pass http://127.0.0.1:8787;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_buffering off;
+}
+```
+
+HSTS는 HTTPS가 정상 동작하는 도메인에서만 설정하세요. 브라우저가 지정 기간 동안 HTTPS를 강제하므로 HTTP로 되돌려 장애를 해결할 수 없습니다. `includeSubDomains`나 preload는 하위 도메인까지 HTTPS를 보장한 경우에만 별도로 결정하며 위 예에는 넣지 않았습니다. HSTS는 broker의 proxy 신뢰·HTTP 허용 정책을 대신하지 않습니다.
+
 ### 관리 화면
 
 관리 화면은 최신 Chrome, Edge, Safari를 지원합니다.
-
-인스턴스 관리자만 **인스턴스 설정 → 클라이언트 버전 현황**에서 모든 프로젝트의 버전별 살아 있는 등록 수, 0.17.3 미만 수, 미확인 등록 수, 24시간 호환 거부 수와 마지막 관측(UTC)을 볼 수 있습니다. 인증·소유권·lease 검사를 통과한 등록·재개·갱신 요청의 자체 보고 버전만 기록하며, 잘못된 값은 `unknown`입니다. 이름·등록 ID·토큰은 표시하지 않습니다. 현재 lease 기준이며 미관측·중지 클라이언트는 안전을 보장하지 않습니다. 메모리 전용이라 재시작하면 초기화되고, 조회는 등록을 정리하거나 삭제하지 않습니다. 0.19.3은 기존 호환 정책을 유지하므로 정상 지원 client의 거부 수는 0입니다.
 
 ## 2. 클라이언트 준비
 
@@ -45,13 +73,13 @@ Node.js 22 이상과 npm이 필요합니다. Windows x64, macOS ARM64·x64, Linu
 
 ```sh
 npm view @xelexis/x-broker version
-npm install -g @xelexis/x-broker@0.19.3
+npm install -g @xelexis/x-broker@0.20.1
 x-broker --version
 ```
 
-예제는 `0.19.3`을 고정합니다. 서버만 바뀐 릴리스는 npm 게시를 생략하므로 서버와 클라이언트 버전이 다를 수 있습니다. 다른 버전은 게시 여부를 확인하고 설치 버전을 바꾸세요. `--version`은 버전 확인이며 대화 연결 검사가 아닙니다.
+예제는 `0.20.1`을 고정합니다. 서버만 바뀐 릴리스는 npm 게시를 생략하므로 서버와 클라이언트 버전이 다를 수 있습니다. 다른 버전은 게시 여부를 확인하고 설치 버전을 바꾸세요. `--version`은 버전 확인이며 대화 연결 검사가 아닙니다.
 
-대안으로 `npx -y @xelexis/x-broker@0.19.3`을 쓸 수 있지만 세션마다 약 100 MB의 npm 프로세스 하나가 계속 남습니다. 이때 아래 `command`를 `npx`로 바꾸고 `args` 앞에 `"-y", "@xelexis/x-broker@0.19.3"`을 추가하세요. `@latest`는 시작 때 레지스트리 확인과 다운로드로 늦어질 수 있으므로 버전을 고정하세요.
+대안으로 `npx -y @xelexis/x-broker@0.20.1`을 쓸 수 있지만 세션마다 약 100 MB의 npm 프로세스 하나가 계속 남습니다. 이때 아래 `command`를 `npx`로 바꾸고 `args` 앞에 `"-y", "@xelexis/x-broker@0.20.1"`을 추가하세요. `@latest`는 시작 때 레지스트리 확인과 다운로드로 늦어질 수 있으므로 버전을 고정하세요.
 
 macOS·Linux에서는 execve를 지원하는 Node의 전역 wrapper가 client로 교체됩니다. **Windows는 execve가 없어 어느 설치 방식이든 node relay가 남으며, 전역 설치는 npm exec 부모 프로세스를 제거합니다.**
 
@@ -102,7 +130,7 @@ Codex는 신뢰한 프로젝트의 설정을 읽습니다. 기존 실행파일 �
 
 ### Codex 재개 실행기 (프롬프트 없는 연결)
 
-macOS·Linux에서 정확한 UUID를 지정한 재개 실행기는 daemon과 embedded 두 모드를 지원합니다. 아래를 `codex-resume.sh`로 저장하고 `sh codex-resume.sh <대화 UUID>`로 실행하세요. `-c model_reasoning_effort=medium` 같은 embedded 옵션을 주면 기존 PID claim 경로를 사용합니다. MCP 설정과 같은 npm client 버전이 필요합니다. 기본 `XB_VERSION=0.19.3`을 실제 MCP 고정 버전에 맞추세요. `--auth-dir`을 따로 썼다면 같은 절대 경로를 `AGENT_SESSION_BROKER_STATE_DIR`로 지정합니다. 사용자·프로젝트 설정은 바꾸지 않습니다.
+macOS·Linux에서 정확한 UUID를 지정한 재개 실행기는 daemon과 embedded 두 모드를 지원합니다. 아래를 `codex-resume.sh`로 저장하고 `sh codex-resume.sh <대화 UUID>`로 실행하세요. `-c model_reasoning_effort=medium` 같은 embedded 옵션을 주면 기존 PID claim 경로를 사용합니다. MCP 설정과 같은 npm client 버전이 필요합니다. 기본 `XB_VERSION=0.20.1`을 실제 MCP 고정 버전에 맞추세요. `--auth-dir`을 따로 썼다면 같은 절대 경로를 `AGENT_SESSION_BROKER_STATE_DIR`로 지정합니다. 사용자·프로젝트 설정은 바꾸지 않습니다.
 
 - embedded 옵션(`-c`·`--config`·`--enable`·`--disable`·`--search`·`--no-daemon`·`--dangerously-bypass-hook-trust`)과 명시 `--remote`는 함께 쓸 수 없습니다. 직접 `codex resume <UUID> ...`를 실행하면 기존 첫 프롬프트 경로를 쓸 수 있습니다.
 - `--remote`는 하나만 허용합니다. 기본 daemon은 CODEX_HOME의 socket 별칭을 TUI에 넘기고 helper는 정규 대상의 inode·peer를 검증합니다. 직접 지정한 endpoint는 그대로 쓰며, ws/wss endpoint는 helper 없이 전달합니다. `--last`·`--all`·`--include-non-interactive`는 거절하며 `--` 뒤는 그대로 넘깁니다.
@@ -204,7 +232,7 @@ until canonical_socket; do
 done
 helper_socket=$socket
 case "$helper_socket" in /*) ;; *) helper_socket="$PWD/$helper_socket" ;; esac
-npx -y "@xelexis/x-broker@${XB_VERSION:-0.19.3}" codex-resume-helper \
+npx -y "@xelexis/x-broker@${XB_VERSION:-0.20.1}" codex-resume-helper \
     --thread "$t" --pid "$$" --codex-home "$home" --socket "$helper_socket" --inode "$inode" \
     </dev/null >/dev/null 2>&1 &
 # Rotate the original positional arguments; never join or eval caller input.
@@ -263,7 +291,7 @@ Kimi는 프로젝트 루트의 `.mcp.json`을 읽습니다. 위 Claude 예제와
 
 Kimi 홈 `~/.kimi-code/config.toml`(또는 `$KIMI_CODE_HOME/config.toml`)에 아래 hook을 설정하세요. 자동으로 전역 설정을 바꾸지 않습니다. hook 명령에 broker 토큰을 넣지 마세요.
 
-MCP 설정과 같은 고정 버전을 `npm install -g @xelexis/x-broker@0.19.3`로 설치하고, `command -v x-broker`가 출력한 절대 경로를 아래 hook 명령에 사용하세요. hook의 `PATH`에서 `node`를 찾을 수 있어야 하며, 업그레이드할 때도 전역 설치 버전을 MCP 설정과 같게 유지하세요.
+MCP 설정과 같은 고정 버전을 `npm install -g @xelexis/x-broker@0.20.1`로 설치하고, `command -v x-broker`가 출력한 절대 경로를 아래 hook 명령에 사용하세요. hook의 `PATH`에서 `node`를 찾을 수 있어야 하며, 업그레이드할 때도 전역 설치 버전을 MCP 설정과 같게 유지하세요.
 
 ```toml
 [[hooks]]
@@ -294,7 +322,7 @@ Kimi 2.3.1은 한 턴의 Stop continuation을 한 번만 실행합니다. 그 �
 
 프로젝트별 토큰은 해당 프로젝트의 entry에만 넣으세요. 토큰을 포함한 설정을 Git·공유 폴더·메시지·진단 로그에 올리지 말고, 아래 예제의 토큰 자리만 로컬에서 바꾸세요. 서버는 교차 프로젝트 전송을 거부합니다. 다만 **같은 대화의 모델 context에는 여러 프로젝트의 정보가 함께 들어가며, 모델이 그 정보를 다른 프로젝트에 다시 보낼 수 있습니다.** 서로 정보를 공유하면 안 되는 프로젝트는 대화를 나누세요.
 
-고정 버전 전역 설치(`npm install -g @xelexis/x-broker@0.19.3`)를 권장합니다. entry마다 client 프로세스가 하나씩 생기며, npx는 npm 부모도 남깁니다. 다음은 macOS ARM64, Node 24.21.0/npm 11.19.0, client 0.18.0의 RSS 합계입니다. 3초 안정화 후 10표본의 중앙값이며 하네스·모델·서버 메모리는 제외했습니다.
+고정 버전 전역 설치(`npm install -g @xelexis/x-broker@0.20.1`)를 권장합니다. entry마다 client 프로세스가 하나씩 생기며, npx는 npm 부모도 남깁니다. 다음은 macOS ARM64, Node 24.21.0/npm 11.19.0, client 0.18.0의 RSS 합계입니다. 3초 안정화 후 10표본의 중앙값이며 하네스·모델·서버 메모리는 제외했습니다.
 
 | 실행/상태 | entry 1개 | entry 2개 | 남은 프로세스 수 1개→2개 |
 | --- | ---: | ---: | --- |
@@ -672,7 +700,6 @@ curl --fail --silent --show-error --header @"$work/headers" \
 | `session:register` | 등록·연결 유지 (필수) | attach_session·register_session·resume_session·renew_lease·probe_response·report_ingress_failure로 자기 세션을 등록하고 연결을 유지합니다. |
 | `session:register:auto` | 연결 요청 시 승인 없이 등록 | 사용자가 이 대화의 연결을 요청하면 승인 절차 없이 등록합니다. 새 대화가 시작되는 것만으로 등록하지 않습니다. 프로젝트 토큰으로 사람의 승인 없이 직접 등록을 요청하며 세션 자격증명에는 위임되지 않습니다. |
 | `session:rename` | 자기 이름 변경 | rename_session으로 자기 세션의 통신 이름을 변경합니다. |
-| `session:spawn` | 세션 생성 | spawn_session 호출 권한이며 현재 원격 서버는 프로세스를 시작하지 않고 지원하지 않는다는 안내를 반환합니다. |
 
 전체 기록은 client 인증 상태 디렉터리(`--auth-dir`) 아래 `diagnostics/v2/<binding-key>.json`에 저장됩니다. 잠금도 `diagnostics/v2/<binding-key>.lock`을 써서 구 client의 prune과 분리합니다. 기존 `diagnostics/<binding-key>.json`은 0.17.2 롤백용으로 쓰기를 멈추고, 조회할 때만 함께 읽습니다. 0.17.2로 내리면 v2 기록은 보이지 않으며 구 client는 v1 기록만 갱신합니다. 새 client로 돌아오면 두 기록을 다시 합쳐 봅니다. 알 수 없는 v2 확장 필드는 저장 시 보존하고, 화면에는 알려진 코드만 표시합니다. 파일은 최근 256건·최대 128 KiB, 권한 0600이며 갱신 성공은 요약 시각만 갱신합니다. 토큰·URL·실행 인자·메시지 본문·오류 원문은 담지 않습니다. 기록 저장 실패는 연결을 중단하지 않으며 강제 종료 순간의 종료 사유는 기록되지 않을 수 있습니다.
 
@@ -763,10 +790,14 @@ message.ack.v1을 협상한 durable 등록은 살아 있는 서버에서 at-leas
 
 Windows에서 Claude 자동 업데이트 뒤 `unsupported-harness`가 나면 최신 client로 MCP를 다시 연결하고, 계속되면 `auth_status.parentDiagnostic`의 안전 진단을 확인하세요.
 
+**Unreleased / 1.0 준비:** `spawn_session`과 `session:spawn` 신규 발급을 제거합니다. 시작 시 기존 토큰·grant·기기 승인 scope에서 `session:spawn`만 원자적으로 제거하며 control version 5와 감사 이력은 유지합니다. 빈 scope 목록이 될 데이터는 무변경으로 시작을 거부합니다. 전체 백업 복원만 롤백으로 지원하며, 캐시된 spawn 호출은 unknown tool 오류가 납니다. 전체 권한 응답은 구 client 호환을 위해 2.0까지 기능 없는 `session:spawn`을 표시합니다. 제한 권한 응답에는 추가하지 않습니다.
+
 <!-- xbroker-docs:upgrade -->
 ## 연결된 채 업그레이드
 
-이번 릴리스의 권장 client는 0.19.3이며 Node.js 22 이상이 필요합니다. 0.19.3 서버는 기존 0.12 이상 client와 legacy 연결을 계속 받습니다. 새 client를 직접 설치한 뒤 MCP를 다시 연결하세요. 터미널 CLI와 다른 host의 전달 형식은 유지됩니다. 파일 첨부에는 서버와 송신·수신 client 모두 0.18.0 이상이 필요합니다.
+**1.0 준비:** spawn 도구·발급 제거. v5 scope 원자 정리, 빈 목록은 무변경 시작 거부. 전체 응답은 2.0까지 호환용 `session:spawn` 유지(기능 없음). 롤백은 전체 백업 복원.
+
+권장 client는 0.20.1(Node.js 22 이상)입니다. 서버·client 모두 상대 버전 0.17.3 이상이 필요하며 legacy·placeholder를 거부합니다. 모든 PC의 client를 먼저 갱신하고 MCP를 재연결한 뒤 서버를 교체하세요. 첨부는 서버와 송신·수신 client 모두 0.18.0 이상이 필요합니다.
 
 `auth_status.update`는 연결한 서버가 알려 준 `recommendedClientVersion`보다 현재 `clientVersion`이 낮을 때만 표시됩니다. 서버 버전과 npm client 버전은 별개이며, 구서버가 권장값을 주지 않으면 안내를 표시하지 않습니다. 이 값은 인터넷의 latest가 아니라 서버 릴리스에서 게시 여부를 검증한 권장 버전입니다.
 
@@ -787,34 +818,80 @@ Codex는 도구 목록을 세션마다 고정하므로 새 client가 추가한 �
 
 ## 버전 호환
 
-| 조합 | 사용할 수 있는 기능 |
+이 절은 1.0의 지원 범위와 **2.0 전까지 지키는 호환 약속**입니다. 버전별 변경은 [UPDATE.md](https://github.com/xelexis-dev/agent-session-broker-deploy/blob/main/UPDATE.md), 데이터 이전과 업데이트 순서는 [업그레이드 경로](https://github.com/xelexis-dev/agent-session-broker-deploy/blob/main/UPGRADE_PATH.md)를 확인하세요.
+
+### 지원 범위
+
+| 구분 | 클라이언트 | 하네스 | 서버 |
+| --- | --- | --- | --- |
+| 지원 | macOS arm64, Windows x64 | Claude Code CLI, Codex CLI(embedded) | Linux amd64·arm64 컨테이너 |
+| 실험적 | Linux x64, macOS x64 | Kimi, Claude VS Code 확장, Codex daemon steer | 서버 단독 실행 파일 |
+| 미지원 | Windows arm64, Linux arm64 | — | — |
+
+- **지원** 대상은 릴리스마다 실제 PC 확인과 자동 회귀 검사를 거칩니다.
+- **실험적** 대상은 동작할 수 있지만 릴리스 확인 범위와 아래 호환 약속에서 제외됩니다.
+- npm 클라이언트에는 Node.js 22 이상이 필요합니다. 관리 화면은 최신 Chrome, Edge, Safari를 지원합니다.
+
+### 최소 버전
+
+| 연결 | 최소 버전 |
 | --- | --- |
-| 서버 0.17.3 + 클라이언트 0.17.2 | 기존 기능은 유지되지만 새 도구는 client 내장 목록에 없어 사용할 수 없습니다. ACK 미협상은 기존 전달 방식입니다. |
-| 클라이언트 0.17.3 + 서버 0.17.2 | 새 서버 도구는 미지원 안내, ACK는 미협상입니다. 기존 기능과 로컬 xbroker_docs는 사용할 수 있습니다. |
-| 서버 0.17.2 + 클라이언트 0.17.1 | 기존 연결·메시지와 서버의 프로젝트 기록 격리·관리 화면을 지원합니다. 새 도구 입력과 프로젝트 종료 안내·수신 프로세스 보호에는 클라이언트도 0.17.2가 필요합니다. |
-| 클라이언트 0.17.2 + 서버 0.17.1 | 기존 연결·메시지를 지원합니다. 프로젝트 종료 판단·수신 프로세스 보호는 지원하지 않습니다. `expectRegistrationId`는 `unsupported`, Kimi 연결은 `unsupported-server`로 거부합니다. |
+| 1.0 서버에 연결하는 클라이언트 | 0.17.3 |
+| 1.0 클라이언트가 연결하는 서버 | 0.17.3 |
 
-업데이트 순서는 **전체 인스턴스 데이터 백업 → 서버 0.19.3 → npm 클라이언트 0.19.3(필요한 경우 직접 갱신) → 각 대화 재연결**입니다.
+최소 버전보다 오래된 클라이언트도 연결과 도구 목록 조회는 되지만, **모든 도구 호출이 거부**됩니다. 0.16.0~0.17.2 클라이언트는 다음 안내를 표시합니다:
 
-1. 서버를 중지하고 전체 인스턴스 데이터와 기존 클라이언트 상태를 백업합니다. 서버 메모리 대기열은 재시작 때 사라지므로 가능한 한 대기 메시지를 먼저 비웁니다.
-2. 같은 데이터 경로로 서버 0.19.3을 시작합니다. HTTP 허용 OFF인 평문 연결은 localhost도 거부하므로 TLS proxy 신뢰 설정이나 명시적 HTTP 허용 정책을 먼저 준비하세요. 기존 저장 형식의 필수 이전은 없으며, 이전 버전에서 올리는 경우에는 [업그레이드 안내](https://github.com/xelexis-dev/agent-session-broker-deploy/blob/main/UPGRADE_PATH.md)를 먼저 따르세요.
-3. 전역 설치는 `npm install -g @xelexis/x-broker@0.19.3`으로 갱신합니다. npx 사용자는 MCP 설정의 고정 버전을 바꾸고 `npx -y @xelexis/x-broker@0.19.3 --version`으로 준비합니다. Windows에서 구 launcher를 처음 교체할 때는 실행 중인 asb-client를 한 번 모두 종료하세요. 새 launcher라도 cache fallback 안내가 있으면 해당 연결을 종료한 뒤 설치합니다.
-4. Claude는 `/mcp`에서 재연결합니다. Codex는 원래 실행 방식과 플래그로 세션을 다시 열어 도구 목록과 새 clientVersion을 확인합니다. 공유 daemon 재개만으로 MCP 교체를 단정하지 마세요. Kimi 업그레이드는 미측정입니다. 같은 등록 ID·이름·수신 준비와 peer 메시지 실제 수신을 확인하며 새 attach/retire로 등록을 바꾸지 않습니다.
+> client-incompatible: client 0.17.2; server 1.0.0; required minimum 0.17.3. Run npm install -g @xelexis/x-broker@latest, then reconnect (Claude: /mcp; Codex: restart the app).
 
-새 서버 도구와 메시지 ACK에는 서버와 클라이언트 모두 0.17.3이 필요합니다. 클라이언트는 내장 도구 목록을 사용하므로 구 client 재연결만으로 새 도구가 생기지 않습니다. ACK는 host 인계까지이며 모델 읽음 확인이 아닙니다. 구 client로 내릴 때 발급된 미확인 메시지가 있으면 고정 최대 10분 동안 재시도 가능한 `storage`로 보호하고 이후 legacy 전달을 허용합니다.
-
-롤백은 서버를 중지하고 **업그레이드 전 전체 데이터 백업과 이전 실행파일을 함께 복원**합니다. `control.db`만 되돌리지 마세요. 백업 이후 변경은 복원되지 않습니다. ACK 대기열은 메모리 전용이며 재시작·롤백으로 사라집니다. 0.17.2는 해결·무시 리포트를 닫힘으로 읽지만 구서버 쓰기는 확장 상태·메모·기록을 잃고 32KiB 초과 record의 상태 변경이 거부될 수 있습니다.
-
-daemon `restart`·`update`는 같은 daemon의 모든 대화 작업을 끊을 수 있습니다. daemon steer는 재시작 뒤 기록·대기열로 확인하며 미확인 메시지와 뒤의 전달을 보류합니다. embedded·Windows 전환과 기존 hook·queue의 짧은 저장 창에는 중복 가능성이 남습니다. 프로젝트에 맞춰 daemon(즉시 전달·재시작 중복 보호)과 embedded(대화별 환경·도구 경계 전달)를 선택하고, 한 대화에서는 모드를 유지하세요.
-
-서버 버전별로 지원하는 클라이언트 최소 버전을 관리합니다. `client-incompatible` 또는 `server-incompatible` 안내가 나오면 표시된 최소 버전을 확인하세요. 클라이언트는 MCP 설정의 npm 버전을 지원 버전으로 바꾼 뒤 Claude에서는 `/mcp`로 재연결하고 Codex에서는 앱을 다시 시작합니다. 서버가 너무 오래된 경우에는 서버도 지원 버전으로 업데이트해야 합니다. `auth_status`에서 클라이언트·서버 버전과 호환 여부를 확인할 수 있습니다.
-
-0.16 이하 클라이언트는 상세 안내 대신 다음 일반 오류만 표시할 수 있습니다:
+0.15 이하 클라이언트는 상세 안내 대신 다음 일반 오류만 표시할 수 있습니다:
 
 > Current session identity or automatic registration is unavailable; verify this MCP client's parent connection.
 
-호환 정책 변경 후 이 오류가 나타나면 `auth_status`로 클라이언트 버전을 확인하고, MCP 설정의 npm 버전을 업데이트한 뒤 Claude는 `/mcp`, Codex는 앱 재시작으로 다시 연결하세요.
+오래된 클라이언트도 승인 코드를 받을 수는 있지만, 승인해도 연결되지 않습니다. **승인하기 전에 클라이언트를 먼저 올리세요.**
+
+1.0 클라이언트가 0.17.3보다 오래된 서버에 연결하면 `server-incompatible` 안내가 나옵니다. 안내 문구의 npm 명령과 별개로 **서버를 0.17.3 이상으로 올려야** 합니다.
+
+`auth_status`의 `clientVersion`, `serverVersion`, `compatible`, `requiredClient`, `requiredServer`로 현재 상태를 확인할 수 있습니다.
+
+### 2.0 전까지 지키는 것
+
+1.0부터 2.0 전까지 다음을 호환되지 않게 바꾸지 않습니다.
+
+- 모델에 보이는 MCP 도구 이름과 입력 schema
+- 클라이언트와 서버 사이의 프로토콜(위 최소 클라이언트·서버 정책 포함)
+- 공개 문서에 적힌 서버·클라이언트 설정 플래그
+- token scope 이름
+- 저장 데이터의 정방향 업그레이드: 새 1.x 서버는 이전 버전의 데이터를 그대로 이어받습니다. 지원하는 출발 버전은 [업그레이드 경로](https://github.com/xelexis-dev/agent-session-broker-deploy/blob/main/UPGRADE_PATH.md)에 적습니다.
+
+### 폐기 정책
+
+- 1.x에서 위 항목을 없애야 하면 **minor 릴리스에서 먼저 예고**하고(UPDATE.md와 이 문서), 실제 제거는 **2.0에서만** 합니다.
+- 보안 결함은 예외입니다. 필요하면 minor·patch 릴리스에서 해당 기능을 막을 수 있으며, 그 사실을 UPDATE.md에 적습니다.
+
+### 약속하지 않는 것
+
+- 관리 REST API v1(beta). 1.x 안에서도 바뀔 수 있습니다.
+- `auth_status`의 진단 필드, 오류·안내 문구, 활동 상태 값
+- 관리 화면의 HTML·URL 구조
+- Claude Code·Codex·Kimi의 내부와 연동하는 방식. 하네스가 바뀌면 연동 방식을 바꿀 수 있습니다.
+- 위 표의 실험적 대상
+- 제자리 다운그레이드(아래 되돌리기)
+
+참고로 현재 동작은 다음과 같습니다. 서버를 재시작하면 대기 중인 메시지는 사라집니다. ACK는 하네스에 넘겼다는 뜻이며 모델이 읽었다는 확인이 아닙니다([메시지 전달과 응답](#메시지-전달과-응답)).
+
+### 되돌리기
+
+되돌리는 방법은 **전체 백업 복원** 하나만 지원합니다.
+
+1. 업데이트 전에 서버를 멈추고 데이터 폴더 전체를 백업합니다.
+2. 되돌릴 때는 서버를 멈추고, 그 백업과 **백업을 만든 버전의 서버**를 함께 복원합니다. `control.db`만 되돌리지 마세요.
+
+새 버전이 쓴 데이터로 이전 버전 서버를 바로 시작하는 제자리 다운그레이드는 지원하지 않습니다.
+
+백업 이후의 변경은 복원되지 않습니다. 특히 **백업 뒤에 취소한 프로젝트 토큰·세션 자격증명·사용자 API 토큰은 복원 후 다시 유효**해지므로, 외부 연결을 다시 열기 전에 다시 취소하세요. 서버 메모리의 대기열은 복원 때 사라집니다. 0.19.x로 되돌리면 그 서버는 0.17.3 미만 클라이언트도 다시 받습니다.
+
+업데이트 순서는 **전체 백업 → (1.0으로 올릴 때는) 클라이언트 먼저 → 서버 교체 → 각 대화 재연결과 확인**입니다. 자세한 절차는 [업그레이드 경로](https://github.com/xelexis-dev/agent-session-broker-deploy/blob/main/UPGRADE_PATH.md)와 [연결된 채 업그레이드](#연결된-채-업그레이드)를 따르세요.
 
 ## 라이선스
 
-비상업적 사용은 무료이며, 상업적 사용에는 별도의 서면 허가가 필요합니다. 자세한 조건은 [LICENSE](LICENSE), 제3자 구성요소의 라이선스와 고지는 [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES)를 확인하세요.
+이 소프트웨어는 MIT 라이선스로 제공됩니다. 자세한 조건은 [LICENSE](LICENSE), 제3자 구성요소의 라이선스와 고지는 [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES)를 확인하세요.
