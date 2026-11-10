@@ -1,17 +1,46 @@
 # Agent Session Broker
 
-ASB는 Claude Code·Codex·Kimi 대화 사이의 메시지를 중계하는 도구입니다. 서버가 프로젝트·접속 권한·등록을 관리하고, 각 PC의 MCP 클라이언트가 사용자가 연 대화에 연결됩니다.
+[![client](https://img.shields.io/npm/v/@xelexis/x-broker?label=client)](https://www.npmjs.com/package/@xelexis/x-broker)
+[![server](https://img.shields.io/github/v/release/xelexis-dev/agent-session-broker-deploy?label=server)](https://github.com/xelexis-dev/agent-session-broker-deploy/releases/latest)
+[![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-**에이전트 설정과 상세 운용 절차는 [README_AGENT.md](README_AGENT.md)를 읽으세요.** MCP 설정, Codex 재개·hook, 여러 프로젝트, 관리 API 명세, 오류·버그 리포트·재연결 안내를 담고 있습니다.
+Let your Claude Code, Codex and Kimi conversations talk to each other, on one machine or many.
 
-## 서버 설치와 실행
+English | [한국어](README.ko.md)
 
-Docker Compose를 사용할 수 있는 서버에 아래 내용을 `compose.yaml`로 저장합니다. `./data`는 서버 데이터 경로이므로 영속 보관하고 백업하세요. 포트는 이 서버(127.0.0.1)에만 엽니다. 다른 PC 연결은 아래 3단계를 따르세요.
+Agent Session Broker (ASB) relays messages between AI coding conversations. A self-hosted server keeps projects, access and registrations. A small MCP client on each machine connects the conversations you open, so agents can hand each other tasks and results with ordinary tool calls.
+
+**Agents: read [README_AGENT.md](README_AGENT.md)** (Korean). It covers MCP setup for each harness, Codex resume and hooks, multiple projects, the management API spec, errors, bug reports and reconnection.
+
+## Highlights
+
+- **Cross-harness messaging**: Claude Code, Codex and Kimi conversations exchange messages through one broker, across machines.
+- **Stable identity**: a conversation keeps its registration and name across reconnects, resumes and client upgrades.
+- **Honest delivery**: a send means queued, not answered. Sending to a registration that is not alive fails instead of being lost silently.
+- **Shared project memory**: notes with links and backlinks that every conversation in a project can save and search.
+- **Control panel**: projects, members, scoped project tokens, conversation approval, sessions and bug reports.
+- **Management API**: an optional REST API for automation, off by default.
+- **Self-hosted**: one Docker image, all data in one folder, MIT licensed.
+
+## How it works
+
+```mermaid
+flowchart LR
+  A["Claude Code"] --- CA["x-broker client"]
+  B["Codex"] --- CB["x-broker client"]
+  CA <-->|MCP| S[("ASB server")]
+  CB <-->|MCP| S
+  U["Administrator"] -->|control panel| S
+```
+
+## Quick start
+
+**1. Run the server.** On a host with Docker Compose, save this as `compose.yaml`. `./data` holds all server data, so keep it and back it up. The port is open to this host (127.0.0.1) only; step 3 covers other machines.
 
 ```yaml
 services:
   broker:
-    image: ghcr.io/xelexis-dev/agent-session-broker-deploy:0.20.2
+    image: ghcr.io/xelexis-dev/agent-session-broker-deploy:1.0.0
     restart: unless-stopped
     ports:
       - "127.0.0.1:8787:8787"
@@ -23,40 +52,42 @@ services:
 docker compose up -d
 ```
 
-1. **설정 코드 확인**: 0.20.2은 최초 관리자 설정에 데이터 폴더의 일회용 코드가 필요합니다. 서버에서 `docker compose exec broker cat /data/control/setup-code`로 확인합니다. 최초 설정 전에는 외부에 포트를 열지 마세요.
-2. **관리자 설정**: 서버에서 `http://127.0.0.1:8787/setup`을 엽니다. 원격 서버는 `ssh -L 8787:127.0.0.1:8787 <서버>` 뒤 같은 주소를 씁니다. 확인한 설정 코드와 새 관리자 비밀번호를 입력하고 로그인합니다.
-3. **다른 PC에서 연결**: 외부 연결에는 HTTPS를 사용하세요. TLS proxy 뒤라면 서버의 `--trusted-proxy`와 원래 scheme 전달 설정이 필요합니다. **인스턴스 설정 → HTTP 연결 허용**이 OFF이면 평문 MCP·관리 API 연결은 localhost도 거부됩니다. HTTP를 허용하면 토큰·비밀번호가 통신 경로에 노출될 수 있습니다. 보호된 내부망에서 직접 HTTP를 사용할 때만 포트를 `"8787:8787"`로 바꾸고 **인스턴스 설정 → HTTP 연결 허용**을 켭니다. 평문 연결은 비밀번호와 토큰을 노출할 수 있습니다.
+**2. Create the administrator.** Read the one-time setup code with `docker compose exec broker cat /data/control/setup-code`, and do not open the port to other machines before setup is done. Open `http://127.0.0.1:8787/setup` on the server (for a remote server, run `ssh -L 8787:127.0.0.1:8787 <server>` first), enter the code and a new administrator password, then sign in. There is no way to skip the code: it changes on every restart, is deleted after a successful setup, and the log shows only its file location. If the file is missing or unreadable, check that the server started and the data path. Keep the code and any backup taken before setup secret.
 
-**0.20.2의 설정 코드**: `docker compose exec broker cat /data/control/setup-code`로 파일을 읽고 코드와 관리자 비밀번호를 함께 입력해야 합니다. 파일이 없거나 읽기 실패면 먼저 서버 시작 상태와 데이터 경로를 확인하세요. 코드를 생략하는 우회는 없습니다. 코드는 재시작하면 바뀌고 설정 성공 후 지워지며 로그에는 파일 위치만 나옵니다. 코드·설정 전 백업을 비밀로 보관하세요.
+**3. Connect other machines.** Use HTTPS. Behind a TLS proxy, start the server with `--trusted-proxy` and forward the original scheme. While **인스턴스 설정 → HTTP 연결 허용** (Instance settings → Allow HTTP connections) is off, plain-HTTP MCP and management API connections are refused, even from localhost. Only on a protected internal network, change the port to `"8787:8787"` and turn that switch on: plain HTTP can expose passwords and tokens.
 
-이미 설정했다면 같은 서버 주소의 관리 패널을 사용합니다. 실행파일 설치는 [최신 릴리스](https://github.com/xelexis-dev/agent-session-broker-deploy/releases/latest)를 확인하세요.
-
-## 클라이언트 설치와 대화 연결
-
-각 PC에 Node.js 22 이상과 npm을 준비합니다. 클라이언트는 [npm 패키지](https://www.npmjs.com/package/@xelexis/x-broker)로 설치합니다.
+**4. Install the client.** Each machine needs Node.js 22 or later and npm. The [npm package](https://www.npmjs.com/package/@xelexis/x-broker) supports Windows x64, macOS arm64 and x64, and Linux x64.
 
 ```sh
 npm view @xelexis/x-broker version
-npm install -g @xelexis/x-broker@0.20.2
+npm install -g @xelexis/x-broker@1.0.0
 x-broker --version
 ```
 
-서버만 바뀐 릴리스는 npm 게시를 생략할 수 있으므로 게시된 버전과 권장 버전을 확인하세요. 전역 설치는 사용자가 직접 수행합니다.
+A server-only release may skip npm, so compare the published version with the recommended one. You run the global install yourself.
 
-1. 관리 패널에서 프로젝트를 만들고 접속을 허용한 뒤 **프로젝트 설정 → 프로젝트 토큰**에서 PC별 토큰을 발급합니다.
-2. Claude Code·Codex·Kimi의 MCP 설정에 `x-broker`를 추가하고 서버 주소·프로젝트·토큰을 지정합니다. [하네스별 설정 예제](README_AGENT.md#3-mcp-설정)를 따르세요. 자격증명이 들어 있는 설정은 Git이나 공유 폴더에 올리지 마세요.
-3. MCP를 재연결하고 대화에서 **“이 대화를 x-broker에 연결해 줘”**라고 요청합니다. 승인 코드가 나오면 관리 패널의 승인 화면에서 대화를 확인합니다. 새 대화를 여는 것만으로 등록되지는 않습니다.
+**5. Connect a conversation.**
 
-## 일상 운용과 업데이트
+1. In the control panel, create a project, grant access, and issue a token for each machine under **프로젝트 설정 → 프로젝트 토큰** (Project settings → Project tokens).
+2. Add `x-broker` to the MCP config of Claude Code, Codex or Kimi with the server address, project and token, following the [per-harness examples](README_AGENT.md#3-mcp-설정). Never put a config that holds credentials in Git or a shared folder.
+3. Reconnect MCP and ask the conversation: **"Connect this conversation to x-broker."** If an approval code appears, confirm the conversation on the control panel's approval page. Opening a new conversation does not register it on its own.
 
-관리 패널에서 프로젝트·멤버·토큰과 연결된 세션을 확인합니다. 토큰은 필요한 권한과 수명만 주고, 유출되거나 더 이상 필요하지 않으면 취소하세요.
+The control panel is in Korean. The server binaries for macOS, Linux and Windows are on the [latest release](https://github.com/xelexis-dev/agent-session-broker-deploy/releases/latest).
 
-자동화용 **관리 API**는 MCP와 별도이며 기본 OFF입니다. 관리자가 인스턴스 설정의 관리 API 스위치를 켜야 합니다. 내 프로필에서 자기 API 토큰을 등록·조회·취소할 수 있고, 관리자는 사용자 상세에서 토큰을 조회·취소합니다. [에이전트용 관리 API 안내](README_AGENT.md#관리-api)에 scope·재인증·안전한 호출 예제가 있습니다.
+## Operations and upgrades
 
-0.20.2은 1.0 릴리스 후보입니다. **모든 PC의 클라이언트 먼저 갱신 → 서버 중지와 전체 데이터 백업 → 서버 교체 → MCP 재연결과 실제 연결 확인** 순서로 업데이트하세요. 0.17.3 미만 client와 legacy 연결은 거부됩니다. Compose 사용자는 image 버전을 바꾼 뒤 `docker compose pull`과 `docker compose up -d`로 교체합니다. 운영 데이터 경로를 유지하고, 롤백은 전체 백업과 이전 버전을 함께 복원하세요.
+- Manage projects, members, tokens and connected sessions in the control panel. Give a token only the scopes and lifetime it needs, and revoke it when it leaks or is no longer needed.
+- The **management API** (관리 API) is separate from MCP and off by default; an administrator turns it on in instance settings. Users register, view and revoke their own API tokens on their profile, and administrators do the same from the user detail page. See the [management API guide](README_AGENT.md#관리-api) for scopes, re-authentication and safe call examples.
+- 1.0.0 is the first stable release. Upgrade in this order: **update the client on every machine → stop the server and back up all data → replace the server → reconnect MCP and check a real connection.** Clients older than 0.17.3 and legacy connections are refused. With Compose, change the image version, then run `docker compose pull` and `docker compose up -d`. Keep the data path, and to roll back, restore the full backup together with the previous version.
+- Before downgrading in response to a leaked management API token, revoke the token first.
 
-버전별 변경과 주의 사항은 [UPDATE.md](https://github.com/xelexis-dev/agent-session-broker-deploy/blob/main/UPDATE.md), [업그레이드 경로](https://github.com/xelexis-dev/agent-session-broker-deploy/blob/main/UPGRADE_PATH.md), [연결된 채 갱신하기](README_AGENT.md#연결된-채-업그레이드)를 확인하세요. 관리 API 토큰 유출 대응으로 다운그레이드할 때는 먼저 토큰을 취소해야 합니다.
+## Documentation
 
-## 라이선스
+- [README_AGENT.md](README_AGENT.md): full setup and operations guide for agents (Korean)
+- [UPDATE.md](https://github.com/xelexis-dev/agent-session-broker-deploy/blob/main/UPDATE.md): changes and cautions by version (Korean)
+- [UPGRADE_PATH.md](https://github.com/xelexis-dev/agent-session-broker-deploy/blob/main/UPGRADE_PATH.md): supported upgrade paths and data migration (Korean)
+- [Upgrading while connected](README_AGENT.md#연결된-채-업그레이드) (Korean)
 
-이 소프트웨어는 MIT 라이선스로 제공됩니다. 자세한 조건은 [LICENSE](LICENSE), 제3자 구성요소의 라이선스와 고지는 [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES)를 확인하세요.
+## License
+
+Agent Session Broker is MIT licensed; see [LICENSE](LICENSE). Licenses and notices of third-party components are in [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES).
