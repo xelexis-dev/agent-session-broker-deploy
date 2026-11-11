@@ -6,6 +6,6 @@ This repository is retired and archived. Agent Session Broker is now developed a
 - Version 1.0.2 and earlier: the server files, release notes and npm provenance stay here and remain downloadable.
 - Version 1.0.3 and later: see the [new repository's releases](https://github.com/xelexis-dev/agent-session-broker/releases).
 - The npm package is still `@xelexis/x-broker`.
-- The container image is still `ghcr.io/xelexis-dev/agent-session-broker-deploy`.
+- The container image is `ghcr.io/xelexis-dev/agent-session-broker` (1.0.3 and later). The old `ghcr.io/xelexis-dev/agent-session-broker-deploy` image name has been retired and removed.
 
 [한국어](README.ko.md)

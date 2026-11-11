@@ -6,6 +6,6 @@
 - 1.0.2 이하: 서버 파일, 릴리스 노트, npm provenance는 이 저장소에 그대로 있으며 계속 받을 수 있습니다.
 - 1.0.3 이상: [새 저장소의 릴리스](https://github.com/xelexis-dev/agent-session-broker/releases)를 보세요.
 - npm 패키지 이름은 그대로 `@xelexis/x-broker`입니다.
-- 컨테이너 이미지 이름은 그대로 `ghcr.io/xelexis-dev/agent-session-broker-deploy`입니다.
+- 컨테이너 이미지는 `ghcr.io/xelexis-dev/agent-session-broker`입니다(1.0.3 이상). 옛 이미지 이름 `ghcr.io/xelexis-dev/agent-session-broker-deploy`는 폐지되어 삭제되었습니다.
 
 [English](README.md)
